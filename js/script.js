@@ -4,7 +4,7 @@ function setPill(el) {
     el.classList.add('active');
 }
 
-// Contact form jdbjdfh
+// Contact form
 function submitForm(e) {
     e.preventDefault();
     document.getElementById('contact-form').style.display = 'none';
