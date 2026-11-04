@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Cliente ve el perfil del Vendedor. RF23.2: puede reportarlo. -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/tamalon_background"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="@dimen/screen_horizontal"
+        android:paddingTop="@dimen/screen_top"
+        android:paddingBottom="32dp">
+
+        <android.widget.Button
+            android:id="@+id/vendor_btn_back"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:background="@color/tamalon_transparent"
+            android:drawableStart="@drawable/ic_arrow"
+            android:drawablePadding="6dp"
+            android:text="@string/btn_back"
+            android:textAllCaps="false"
+            android:textColor="@color/tamalon_field_text"
+            android:textSize="9sp" 
+            android:visibility="gone" />
+
+        <!-- Avatar + nombre del vendedor -->
+        <LinearLayout
+            style="@style/Tamalon.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <ImageView
+                android:id="@+id/vendor_avatar"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:background="@drawable/bg_circle"
+                android:contentDescription="@string/profile_photo_label"
+                android:src="@drawable/ic_user" />
+
+            <TextView
+                android:id="@+id/vendor_name"
+                style="@style/Tamalon.Body"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/profile_user_placeholder"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/vendor_role_badge"
+                style="@style/Tamalon.Caption"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:background="@drawable/bg_badge"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="3dp"
+                android:text="@string/rol_vendedor"
+                android:textSize="8sp" />
+
+            <!-- Indicador de plan premium -->
+            <TextView
+                android:id="@+id/vendor_premium_badge"
+                style="@style/Tamalon.Caption"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:background="@drawable/bg_badge_gold"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="3dp"
+                android:text="@string/plan_premium"
+                android:textSize="8sp"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <!-- Información del vendedor -->
+        <LinearLayout
+            style="@style/Tamalon.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="vertical"
+            android:padding="14dp">
+
+            <TextView
+                style="@style/Tamalon.Caption"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/vendor_categories_label"
+                android:letterSpacing="0.08" />
+
+            <TextView
+                android:id="@+id/vendor_categories"
+                style="@style/Tamalon.Body"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="—"
+                android:textSize="10sp" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginVertical="10dp"
+                android:background="@color/tamalon_line" />
+
+            <TextView style="@style/Tamalon.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="TELÉFONO" />
+            <TextView android:id="@+id/vendor_phone" style="@style/Tamalon.Body" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="No agregado" android:textSize="10sp" />
+            <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginVertical="10dp" android:background="@color/tamalon_line" />
+            <TextView
+                style="@style/Tamalon.Caption"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/profile_date_label"
+                android:letterSpacing="0.08" />
+
+            <TextView
+                android:id="@+id/vendor_since"
+                style="@style/Tamalon.Body"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="—"
+                android:textSize="10sp" />
+        </LinearLayout>
+
+        <!-- Ver catálogo -->
+        <android.widget.Button
+            android:id="@+id/vendor_btn_catalog"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="22dp"
+            android:background="@drawable/bg_button"
+            android:fontFamily="@font/inter"
+            android:text="@string/vendor_view_catalog"
+            android:textAllCaps="false"
+            android:textColor="@color/tamalon_field_text"
+            android:textSize="11sp" />
+
+        <!-- Reportar vendedor -->
+        <android.widget.Button
+            android:id="@+id/vendor_btn_report"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_surface_card"
+            android:fontFamily="@font/inter"
+            android:text="@string/report_user_btn"
+            android:textAllCaps="false"
+            android:textColor="@color/tamalon_field_text"
+            android:textSize="10sp" />
+    </LinearLayout>
+</ScrollView>

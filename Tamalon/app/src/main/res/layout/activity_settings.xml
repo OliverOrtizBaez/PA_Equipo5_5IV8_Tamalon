@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/tamalon_background"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="@dimen/screen_horizontal"
+        android:paddingTop="@dimen/screen_top"
+        android:paddingBottom="32dp">
+
+        <TextView
+            style="@style/Tamalon.SectionTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/settings_title"
+            android:textColor="@color/tamalon_ink"
+            android:textSize="22sp" />
+
+        <!-- Cuenta -->
+        <TextView
+            style="@style/Tamalon.Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="22dp"
+            android:text="@string/settings_section_account"
+            android:letterSpacing="0.1" />
+
+        <LinearLayout
+            style="@style/Tamalon.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:orientation="vertical">
+
+            <android.widget.Button
+                android:id="@+id/settings_edit_profile"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:background="@color/tamalon_transparent"
+                android:gravity="center_vertical|start"
+                android:paddingHorizontal="14dp"
+                android:text="@string/settings_edit_profile"
+                android:textAllCaps="false"
+                android:textColor="@color/tamalon_ink"
+                android:textSize="10sp" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginHorizontal="14dp"
+                android:background="@color/tamalon_line" />
+
+            <android.widget.Button
+                android:id="@+id/settings_change_password"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:background="@color/tamalon_transparent"
+                android:gravity="center_vertical|start"
+                android:paddingHorizontal="14dp"
+                android:text="@string/settings_change_password"
+                android:textAllCaps="false"
+                android:textColor="@color/tamalon_ink"
+                android:textSize="10sp" />
+        </LinearLayout>
+
+        <!-- Suscripción -->
+        <TextView
+            style="@style/Tamalon.Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="@string/settings_section_subscription"
+            android:letterSpacing="0.1" />
+
+        <LinearLayout
+            style="@style/Tamalon.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:gravity="center_vertical"
+                android:paddingHorizontal="14dp"
+                android:orientation="horizontal">
+
+                <TextView
+                    style="@style/Tamalon.Body"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/settings_current_plan"
+                    android:textSize="10sp" />
+
+                <TextView
+                    android:id="@+id/settings_plan_badge"
+                    style="@style/Tamalon.Caption"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_badge"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="3dp"
+                    android:text="@string/plan_gratuito"
+                    android:textSize="8sp" />
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginHorizontal="14dp"
+                android:background="@color/tamalon_line" />
+
+            <android.widget.Button
+                android:id="@+id/settings_upgrade"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:background="@color/tamalon_transparent"
+                android:gravity="center_vertical|start"
+                android:paddingHorizontal="14dp"
+                android:text="@string/settings_upgrade"
+                android:textAllCaps="false"
+                android:textColor="@color/tamalon_ink"
+                android:textSize="10sp" />
+        </LinearLayout>
+
+        <!-- Soporte -->
+        <TextView
+            style="@style/Tamalon.Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="@string/settings_section_support"
+            android:letterSpacing="0.1" />
+
+        <LinearLayout
+            style="@style/Tamalon.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:orientation="vertical">
+
+            <android.widget.Button
+                android:id="@+id/settings_support"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:background="@color/tamalon_transparent"
+                android:gravity="center_vertical|start"
+                android:paddingHorizontal="14dp"
+                android:text="@string/settings_support"
+                android:textAllCaps="false"
+                android:textColor="@color/tamalon_ink"
+                android:textSize="10sp" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginHorizontal="14dp"
+                android:background="@color/tamalon_line" />
+
+            <android.widget.Button
+                android:id="@+id/settings_terms"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:background="@color/tamalon_transparent"
+                android:gravity="center_vertical|start"
+                android:paddingHorizontal="14dp"
+                android:text="@string/settings_terms"
+                android:textAllCaps="false"
+                android:textColor="@color/tamalon_ink"
+                android:textSize="10sp" />
+        </LinearLayout>
+
+        <!-- Sesión -->
+        <android.widget.Button
+            android:id="@+id/settings_logout"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="28dp"
+            android:background="@drawable/bg_button_destructive"
+            android:fontFamily="@font/inter"
+            android:text="@string/settings_logout"
+            android:textAllCaps="false"
+            android:textColor="#fff"
+            android:textSize="11sp" />
+
+        <TextView
+            android:id="@+id/settings_version"
+            style="@style/Tamalon.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:gravity="center"
+            android:text="Tamalón v1.0"
+            android:textSize="8sp" />
+    </LinearLayout>
+</ScrollView>

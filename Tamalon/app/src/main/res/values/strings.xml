@@ -1,0 +1,430 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  strings.xml — Español (predeterminado)
+  Idioma de respaldo si el dispositivo no tiene traducción disponible.
+  El nombre "Tamalon" nunca se traduce.
+-->
+<resources>
+    <!-- App -->
+    <string name="app_name">Tamalon</string>
+    <string name="app_tagline">Antojitos que te encuentran</string>
+
+    <!-- Bienvenida -->
+    <string name="welcome_role_client">Soy Cliente</string>
+    <string name="welcome_role_client_desc">Descubre vendedores cerca de ti</string>
+    <string name="welcome_role_vendor">Soy Vendedor</string>
+    <string name="welcome_role_vendor_desc">Administra tu presencia y catálogo</string>
+    <string name="welcome_already_account">Ya tengo una cuenta</string>
+    <string name="welcome_legal">Al continuar aceptas los Términos y el Aviso de privacidad.</string>
+
+    <!-- Inicio de sesión -->
+    <string name="login_title">Iniciar sesión</string>
+    <string name="login_subtitle">Bienvenido de nuevo</string>
+    <string name="login_email">Correo electrónico</string>
+    <string name="login_email_hint">nombre@correo.com</string>
+    <string name="login_password">Contraseña</string>
+    <string name="login_password_hint">Contraseña123</string>
+    <string name="login_button">Entrar</string>
+    <string name="login_forgot_password">¿Olvidaste tu contraseña?</string>
+    <string name="login_no_account">¿No tienes cuenta? Regístrate</string>
+    <string name="login_loading">Iniciando sesión…</string>
+
+    <!-- Registro -->
+    <string name="register_title">Crear cuenta</string>
+    <string name="register_subtitle">Comienza en Tamalon</string>
+    <string name="register_name">Nombre completo</string>
+    <string name="register_name_hint">Tu nombre completo</string>
+    <string name="register_email">Correo electrónico</string>
+    <string name="register_email_hint">nombre@correo.com</string>
+    <string name="register_password">Contraseña</string>
+    <string name="register_password_hint">Mínimo 8 caracteres</string>
+    <string name="register_confirm_password">Confirmar contraseña</string>
+    <string name="register_confirm_hint">Repite tu contraseña</string>
+    <string name="register_role_client">Cliente</string>
+    <string name="register_role_vendor">Vendedor</string>
+    <string name="register_role_label">Tipo de cuenta</string>
+    <string name="register_terms">Acepto haber leído los documentos siguientes:</string>
+    <string name="register_button">Crear cuenta gratuita</string>
+    <string name="register_back_login">Volver a iniciar sesión</string>
+    <string name="register_loading">Creando cuenta…</string>
+
+    <!-- Recuperación de contraseña -->
+    <string name="recover_title">Recuperar contraseña</string>
+    <string name="recover_subtitle">Te enviaremos un enlace por correo</string>
+    <string name="recover_email">Correo electrónico</string>
+    <string name="recover_button">Solicitar enlace</string>
+    <string name="recover_back">Volver al inicio de sesión</string>
+    <string name="recover_pending_note">Esta función requiere integración con el servidor de correo. Por ahora solo está disponible la interfaz.</string>
+
+    <!-- Mapa -->
+    <string name="map_title">Tu ubicación de hoy</string>
+    <string name="map_title_client">Encuentra tu antojo</string>
+    <string name="map_search_hint">Buscar vendedores o antojitos</string>
+    <string name="map_vendors_nearby">Vendedores cercanos</string>
+    <string name="map_radius_label">Hasta 3 km de tu ubicación</string>
+    <string name="map_loading">Cargando mapa…</string>
+    <string name="map_error">Error al cargar el mapa. Intenta de nuevo.</string>
+    <string name="map_offline">Sin conexión. Verifica tu red.</string>
+    <string name="map_no_permission">Permiso de ubicación desactivado.</string>
+    <string name="map_zoom_in">Acercar</string>
+    <string name="map_zoom_out">Alejar</string>
+    <string name="map_my_location">Mi ubicación</string>
+    <string name="map_vendor_pin">Ver vendedor disponible</string>
+    <string name="map_update_pending">Ubicación pendiente de actualizar</string>
+    <string name="map_permission_rationale">Tamalon necesita tu ubicación para mostrarte vendedores cercanos.</string>
+    <string name="map_permission_denied">Activa el permiso de ubicación en Configuración para usar el mapa.</string>
+    <string name="map_open_settings">Abrir configuración</string>
+
+    <!-- Disponibilidad del Vendedor -->
+    <string name="availability_label">DISPONIBILIDAD</string>
+    <string name="availability_on_route">En ruta</string>
+    <string name="availability_off_route">Fuera de ruta</string>
+    <string name="availability_sharing">Compartiendo ubicación</string>
+    <string name="availability_paused">Ubicación pausada</string>
+    <string name="availability_sharing_detail">Actualizando cada 15 segundos.</string>
+    <string name="availability_paused_detail">Activa "En ruta" cuando estés disponible.</string>
+    <string name="availability_no_permission">Activa el permiso de ubicación para ponerte en ruta.</string>
+
+    <!-- Perfil -->
+    <string name="profile_title">Perfil</string>
+    <string name="profile_eyebrow">TU CUENTA</string>
+    <string name="profile_user_placeholder">USUARIO</string>
+    <string name="profile_email_placeholder">correo@ejemplo.com</string>
+    <string name="profile_personal_data">Datos personales</string>
+    <string name="profile_personal_desc">Nombre, teléfono y fotografía</string>
+    <string name="profile_preferences">Preferencias de antojo</string>
+    <string name="profile_preferences_desc">Categorías que quieres descubrir</string>
+    <string name="profile_orders">Historial de pedidos</string>
+    <string name="profile_orders_desc">Actividad anterior de tu cuenta</string>
+    <string name="profile_settings">Configuración y ayuda</string>
+    <string name="profile_settings_desc">Cuenta, privacidad y soporte</string>
+    <string name="profile_plan">Plan y suscripción</string>
+    <string name="profile_plan_desc">Beneficios, pago y renovación</string>
+    <string name="profile_logout">Cerrar sesión</string>
+    <string name="profile_logout_confirm">¿Deseas cerrar sesión?</string>
+
+    <!-- Datos personales -->
+    <string name="personal_title">Datos personales</string>
+    <string name="personal_change_photo">Cambiar fotografía</string>
+    <string name="personal_photo_hint">JPG o PNG · hasta 5 MB</string>
+    <string name="personal_name">Nombre completo</string>
+    <string name="personal_name_hint">2 a 100 caracteres</string>
+    <string name="personal_email">Correo electrónico</string>
+    <string name="personal_phone">Teléfono</string>
+    <string name="personal_phone_hint">10 dígitos</string>
+    <string name="personal_save">Guardar cambios</string>
+
+    <!-- Catálogos -->
+    <string name="catalogs_title">Mis catálogos</string>
+    <string name="catalogs_new">Crear catálogo</string>
+    <string name="catalogs_empty_title">Aún no tienes catálogos</string>
+    <string name="catalogs_empty_desc">Crea tu primer catálogo y agrega productos.</string>
+    <string name="catalog_name_label">Nombre del catálogo</string>
+    <string name="catalog_name_hint">1 a 50 caracteres</string>
+    <string name="catalog_save">Guardar catálogo</string>
+    <string name="catalog_delete">Eliminar catálogo</string>
+    <string name="catalog_delete_confirm">¿Eliminar este catálogo y sus productos?</string>
+    <string name="catalog_limit_free">Límite alcanzado: plan Gratuito permite 1 catálogo.</string>
+    <string name="catalog_limit_premium">Límite alcanzado: plan Premium permite 3 catálogos.</string>
+
+    <!-- Productos -->
+    <string name="product_title">Crear producto</string>
+    <string name="product_title_edit">Editar producto</string>
+    <string name="product_image_label">Seleccionar imagen</string>
+    <string name="product_image_hint">JPG o PNG · hasta 5 MB</string>
+    <string name="product_name_label">Nombre del producto</string>
+    <string name="product_name_hint">2 a 60 caracteres</string>
+    <string name="product_description_label">Descripción</string>
+    <string name="product_description_hint">1 a 300 caracteres</string>
+    <string name="product_price_label">Precio en pesos mexicanos</string>
+    <string name="product_price_hint">$0.01 a $99,999.99 MXN</string>
+    <string name="product_category_label">Categoría</string>
+    <string name="product_category_default">Selecciona una categoría</string>
+    <string name="product_save">Guardar producto</string>
+    <string name="product_delete">Eliminar producto</string>
+    <string name="product_limit_free">Límite alcanzado: plan Gratuito permite 10 productos por catálogo.</string>
+    <string name="product_limit_premium">Límite alcanzado: plan Premium permite 50 productos por catálogo.</string>
+    <string name="products_count_label">%1$d de %2$d productos</string>
+
+    <!-- Rutas -->
+    <string name="routes_title">Mis rutas</string>
+    <string name="routes_new">Crear ruta</string>
+    <string name="routes_premium_title">Rutas programadas</string>
+    <string name="routes_premium_desc">Crea hasta 3 rutas y programa una por día de la semana.</string>
+    <string name="routes_empty_title">No hay rutas registradas</string>
+    <string name="routes_day_label">Día de la semana</string>
+    <string name="routes_day_default">Selecciona un día</string>
+    <string name="routes_day_conflict">Ya existe una ruta para ese día.</string>
+    <string name="routes_limit">Límite alcanzado: máximo 3 rutas permitidas.</string>
+    <string name="routes_delete_confirm">¿Eliminar esta ruta?</string>
+    <string name="routes_save">Guardar ruta</string>
+
+    <!-- Favoritos -->
+    <string name="favorites_title">Mis favoritos</string>
+    <string name="favorites_empty_title">No hay vendedores favoritos</string>
+    <string name="favorites_empty_desc">Guarda vendedores desde su perfil para encontrarlos aquí.</string>
+    <string name="favorites_limit">Límite alcanzado: máximo 5 vendedores favoritos.</string>
+    <string name="favorites_premium_title">Guarda tus favoritos</string>
+    <string name="favorites_premium_desc">Recibe alertas de inicio de ruta y proximidad.</string>
+    <string name="favorites_add">Guardar como favorito</string>
+    <string name="favorites_remove">Quitar de favoritos</string>
+    <string name="favorites_duplicate">Este vendedor ya está en tus favoritos.</string>
+
+    <!-- Notificaciones -->
+    <string name="notifications_title">Notificaciones</string>
+    <string name="notifications_eyebrow">ACTIVIDAD</string>
+    <string name="notifications_premium_title">Alertas que sí importan</string>
+    <string name="notifications_premium_desc">Recibe avisos cuando un favorito inicia ruta o está cerca.</string>
+
+    <!-- Reportes -->
+    <string name="report_user_title">Reportar usuario</string>
+    <string name="report_vendor_title">Reportar Vendedor</string>
+    <string name="report_client_title">Reportar Cliente</string>
+    <string name="report_target_label">USUARIO A REPORTAR</string>
+    <string name="report_reason_label">Motivo del reporte</string>
+    <string name="report_reason_hint">Describe brevemente lo ocurrido</string>
+    <string name="report_submit">Enviar reporte</string>
+    <string name="report_cancel">Cancelar</string>
+    <string name="report_sending">Enviando reporte…</string>
+    <string name="report_success">El reporte se registró correctamente.</string>
+    <string name="report_error">Ocurrió un error inesperado. Intenta de nuevo más tarde.</string>
+    <string name="report_offline">Sin conexión a internet. Verifica tu conexión e intenta de nuevo.</string>
+    <string name="report_reason_required">Escribe el motivo del reporte.</string>
+    <string name="report_reason_length">El motivo debe tener entre 1 y 500 caracteres.</string>
+    <string name="report_chars_count">%1$d / 500</string>
+
+    <!-- Ayuda y soporte -->
+    <string name="support_title">Ayuda y soporte</string>
+    <string name="support_eyebrow">SOPORTE</string>
+    <string name="support_category_label">Tipo de solicitud</string>
+    <string name="support_category_default">Selecciona una categoría</string>
+    <string name="support_cat_complaint">Queja</string>
+    <string name="support_cat_request">Petición</string>
+    <string name="support_cat_suggestion">Sugerencia</string>
+    <string name="support_cat_technical">Problema técnico</string>
+    <string name="support_cat_other">Otro</string>
+    <string name="support_subject_label">Asunto</string>
+    <string name="support_subject_hint">Escribe el asunto de tu solicitud</string>
+    <string name="support_description_label">Descripción</string>
+    <string name="support_description_hint">Describe con detalle tu solicitud</string>
+    <string name="support_submit">Enviar solicitud</string>
+    <string name="support_cancel">Cancelar</string>
+    <string name="support_sending">Enviando solicitud…</string>
+    <string name="support_success">Solicitud enviada. Recibirás una respuesta pronto.</string>
+    <string name="support_error">Ocurrió un error. Intenta de nuevo más tarde.</string>
+    <string name="support_status_pending">Pendiente</string>
+    <string name="support_status_reviewing">En revisión</string>
+    <string name="support_status_resolved">Atendida</string>
+
+    <!-- Suscripción Premium -->
+    <string name="premium_title">Plan Premium</string>
+    <string name="premium_eyebrow">SUSCRIPCIÓN</string>
+    <string name="premium_hero_title">Más cerca de lo que te gusta</string>
+    <string name="premium_price_placeholder">Precio por definir</string>
+    <string name="premium_currency">MXN / mes</string>
+    <string name="premium_free_label">GRATUITO</string>
+    <string name="premium_free_title">Lo esencial</string>
+    <string name="premium_label">PREMIUM</string>
+    <string name="premium_full_title">Todo el potencial</string>
+    <string name="premium_subscribe_button">Contratar Premium</string>
+    <string name="premium_cancel_renewal">Cancelar renovación</string>
+    <string name="premium_active_renewal">Renovación automática activa</string>
+    <string name="premium_next_billing">Próxima fecha de corte: %1$s</string>
+
+    <!-- Método de pago -->
+    <string name="payment_method_title">Método de pago</string>
+    <string name="payment_eyebrow">PAGO SEGURO</string>
+    <string name="payment_plan_label">Plan seleccionado</string>
+    <string name="payment_price_label">Precio</string>
+    <string name="payment_summary_title">Resumen de la suscripción</string>
+    <string name="payment_method_label">Forma de pago</string>
+    <string name="payment_method_card">Tarjeta de crédito o débito</string>
+    <string name="payment_button">Pagar</string>
+    <string name="payment_cancel">Cancelar</string>
+    <string name="payment_processing">Procesando pago…</string>
+    <string name="payment_success">Pago aprobado. ¡Bienvenido a Premium!</string>
+    <string name="payment_error">Pago rechazado. Verifica tus datos e intenta de nuevo.</string>
+    <string name="payment_cancelled">Pago cancelado.</string>
+    <string name="payment_sandbox_note">Ambiente de pruebas (Sandbox). No se generarán cargos reales.</string>
+    <string name="payment_security_note">No almacenamos datos de tu tarjeta. El pago se procesa de forma segura.</string>
+    <string name="payment_backend_note">La verificación del pago requiere conexión con el servidor. Función no disponible en modo local.</string>
+
+    <!-- Configuración -->
+    <string name="settings_title">Configuración y ayuda</string>
+    <string name="settings_eyebrow">CUENTA</string>
+    <string name="settings_privacy">Privacidad y seguridad</string>
+    <string name="settings_privacy_desc">Preferencias de cuenta</string>
+    <string name="settings_notifications">Preferencias de notificaciones</string>
+    <string name="settings_notifications_desc">Avisos y alertas</string>
+    <string name="settings_support">Ayuda y soporte</string>
+    <string name="settings_support_desc">Quejas, peticiones y asistencia</string>
+    <string name="settings_terms">Términos y condiciones</string>
+    <string name="settings_terms_desc">Información legal</string>
+    <string name="settings_language">Idioma</string>
+    <string name="settings_language_desc">Español / English</string>
+    <string name="settings_language_es">Español</string>
+    <string name="settings_language_en">English</string>
+    <string name="settings_logout">Cerrar sesión</string>
+
+    <!-- Perfil de vendedor (vista del cliente) -->
+    <string name="vendor_detail_title">Vendedor disponible</string>
+    <string name="vendor_detail_eyebrow">UBICACIÓN ACTUAL</string>
+    <string name="vendor_on_route">EN RUTA</string>
+    <string name="vendor_view_catalog">Ver catálogo</string>
+    <string name="vendor_view_profile">Ver perfil</string>
+    <string name="vendor_report">Reportar vendedor</string>
+    <string name="vendor_route_premium_note">El trazado completo aparecerá aquí cuando exista una ruta activa.</string>
+    <string name="vendor_route_free_note">En el plan gratuito solo se muestra la ubicación actual.</string>
+
+    <!-- Perfil de cliente (vista del vendedor) -->
+    <string name="client_detail_title">USUARIO</string>
+    <string name="client_detail_eyebrow">PERFIL DE CLIENTE</string>
+    <string name="client_report">Reportar usuario</string>
+
+    <!-- Catálogo público -->
+    <string name="public_catalog_title">Productos disponibles</string>
+    <string name="public_catalog_eyebrow">CATÁLOGO PÚBLICO</string>
+    <string name="public_catalog_premium_view">Vista Premium activa</string>
+    <string name="public_catalog_free_view">Vista gratuita</string>
+    <string name="public_catalog_free_note">Verás nombre, imagen y categoría. Precio y descripción requieren Premium.</string>
+    <string name="public_catalog_empty_title">Sin productos visibles</string>
+    <string name="public_catalog_empty_desc">Este vendedor todavía no tiene productos públicos.</string>
+
+    <!-- Historial -->
+    <string name="history_title">Historial de pedidos</string>
+    <string name="history_eyebrow">ACTIVIDAD</string>
+    <string name="history_empty_title">No hay pedidos</string>
+    <string name="history_empty_desc">Cuando exista información conectada, tus pedidos anteriores aparecerán aquí.</string>
+
+    <!-- Preferencias -->
+    <string name="preferences_title">Preferencias de antojo</string>
+    <string name="preferences_eyebrow">TU PERFIL</string>
+    <string name="preferences_save">Guardar preferencias</string>
+
+    <!-- Mensajes de validación (compartidos) -->
+    <string name="validation_required_field">Este campo es obligatorio.</string>
+    <string name="validation_invalid_email">Ingresa un correo electrónico válido.</string>
+    <string name="validation_email_too_long">El correo no puede exceder 100 caracteres.</string>
+    <string name="validation_email_taken">Este correo ya está registrado</string>
+    <string name="validation_password_length">La contraseña debe tener entre 8 y 64 caracteres.</string>
+    <string name="validation_password_format">La contraseña debe tener al menos una letra y un número.</string>
+    <string name="validation_passwords_mismatch">Las contraseñas no coinciden.</string>
+    <string name="validation_name_length">El nombre debe tener entre 2 y 100 caracteres.</string>
+    <string name="validation_phone_format">El teléfono debe tener exactamente 10 dígitos.</string>
+    <string name="validation_image_format">La imagen debe ser JPG o PNG.</string>
+    <string name="validation_image_size">La imagen no puede superar 5 MB.</string>
+    <string name="validation_price_range">El precio debe estar entre $0.01 y $99,999.99 MXN.</string>
+    <string name="validation_price_decimals">El precio puede tener máximo 2 decimales.</string>
+    <string name="validation_accept_terms">Debes aceptar los Términos y el Aviso de privacidad.</string>
+    <string name="validation_select_role">Selecciona si eres Cliente o Vendedor.</string>
+    <string name="validation_invalid_credentials">Correo o contraseña incorrectos.</string>
+    <string name="validation_account_not_found">No existe una cuenta con ese correo.</string>
+    <string name="validation_premium_required">Esta función es exclusiva del plan Premium.</string>
+    <string name="validation_location_permission">Activa el permiso de ubicación para esta función.</string>
+    <string name="validation_storage_error">Error al guardar los datos. Intenta de nuevo.</string>
+    <string name="validation_unexpected_error">Ocurrió un error inesperado. Intenta de nuevo más tarde.</string>
+    <string name="validation_operation_cancelled">Operación cancelada.</string>
+    <string name="validation_char_limit">Máximo %1$d caracteres permitidos.</string>
+    <string name="validation_catalog_name_length">El nombre del catálogo debe tener entre 1 y 50 caracteres.</string>
+    <string name="validation_product_name_length">El nombre del producto debe tener entre 2 y 60 caracteres.</string>
+    <string name="validation_product_desc_length">La descripción debe tener entre 1 y 300 caracteres.</string>
+
+    <!-- Estados de carga -->
+    <string name="loading_generic">Cargando…</string>
+    <string name="saving_generic">Guardando…</string>
+    <string name="deleting_generic">Eliminando…</string>
+
+    <!-- Diálogos comunes -->
+    <string name="dialog_confirm">Aceptar</string>
+    <string name="dialog_cancel">Cancelar</string>
+    <string name="dialog_yes">Sí</string>
+    <string name="dialog_no">No</string>
+    <string name="dialog_delete_confirm_title">Confirmar eliminación</string>
+    <string name="dialog_logout_title">Cerrar sesión</string>
+    <string name="dialog_logout_message">¿Deseas cerrar la sesión de esta cuenta?</string>
+
+    <!-- Navegación inferior -->
+    <string name="nav_map">Inicio</string>
+    <string name="nav_map_client">Mapa</string>
+    <string name="nav_explore">Explorar</string>
+    <string name="nav_favorites">Favoritos</string>
+    <string name="nav_profile">Perfil</string>
+    <string name="nav_catalogs">Catálogos</string>
+    <string name="nav_routes">Rutas</string>
+
+    <!-- Badges de plan -->
+    <string name="badge_free">GRATUITO</string>
+    <string name="badge_premium">PREMIUM</string>
+    <string name="badge_client">CLIENTE</string>
+    <string name="badge_vendor">VENDEDOR</string>
+    <string name="badge_on_route">EN RUTA</string>
+    <string name="badge_off_route">FUERA DE RUTA</string>
+    <string name="badge_new">nueva</string>
+
+    <!-- Botones genéricos -->
+    <string name="btn_back">Volver</string>
+    <string name="btn_save">Guardar</string>
+    <string name="btn_cancel">Cancelar</string>
+    <string name="btn_delete">Eliminar</string>
+    <string name="btn_edit">Editar</string>
+    <string name="btn_add">Agregar</string>
+    <string name="btn_retry">Reintentar</string>
+    <string name="btn_go_premium">Conocer Premium</string>
+
+    <!-- Recursos de compatibilidad para las pantallas actuales -->
+    <string name="product_form_add_title">Agregar producto</string>
+    <string name="product_image_tap">Toca para agregar una foto</string>
+    <string name="product_visible_label">Mostrar en catálogo</string>
+    <string name="product_btn_delete">Eliminar producto</string>
+    <string name="map_btn_grant">Permitir ubicación</string>
+    <string name="map_btn_activate">Ponerme en ruta</string>
+    <string name="login_illustration_desc">Ilustración de Tamalon</string>
+    <string name="register_name_label">@string/register_name</string>
+    <string name="register_rol_label">@string/register_role_label</string>
+    <string name="rol_cliente">@string/register_role_client</string>
+    <string name="rol_vendedor">@string/register_role_vendor</string>
+    <string name="register_submit">@string/register_button</string>
+    <string name="register_back_to_login">@string/register_back_login</string>
+    <string name="profile_photo_label">@string/personal_change_photo</string>
+    <string name="profile_orders_label">@string/profile_orders</string>
+    <string name="profile_favorites_label">@string/favorites_title</string>
+    <string name="settings_section_account">Cuenta</string>
+    <string name="profile_order_history">@string/history_title</string>
+    <string name="settings_upgrade">@string/btn_go_premium</string>
+    <string name="premium_back">@string/btn_back</string>
+    <string name="premium_badge">@string/premium_label</string>
+    <string name="plan_premium">Premium</string>
+    <string name="premium_tagline">@string/premium_hero_title</string>
+    <string name="premium_cta">@string/premium_subscribe_button</string>
+    <string name="premium_cancel_note">La cancelación de renovación estará disponible al conectar el servicio de suscripciones.</string>
+    <string name="login_email_label">@string/login_email</string>
+    <string name="login_password_label">@string/login_password</string>
+    <string name="login_submit">@string/login_button</string>
+    <string name="login_forgot">@string/login_forgot_password</string>
+    <string name="profile_plan_label">@string/profile_plan</string>
+    <string name="plan_gratuito">Gratuito</string>
+    <string name="profile_date_label">Fecha de registro</string>
+    <string name="report_user_btn">@string/report_user_title</string>
+    <string name="catalog_upgrade_notice">Consulta más detalles y beneficios con el plan Premium.</string>
+    <string name="catalog_empty">@string/public_catalog_empty_desc</string>
+    <string name="vendor_cat">Categoría</string>
+    <string name="recover_instructions">@string/recover_subtitle</string>
+    <string name="recover_submit">@string/recover_button</string>
+    <string name="recover_backend_note">@string/recover_pending_note</string>
+    <string name="settings_edit_profile">Editar perfil</string>
+    <string name="settings_change_password">Cambiar contraseña</string>
+    <string name="settings_section_subscription">Suscripción</string>
+    <string name="settings_current_plan">Plan actual</string>
+    <string name="settings_section_support">Ayuda y soporte</string>
+    <string name="catalogs_limit_free">@string/catalog_limit_free</string>
+    <string name="catalogs_empty">@string/catalogs_empty_desc</string>
+    <string name="catalogs_form_name_label">@string/catalog_name_label</string>
+    <string name="catalogs_form_name_hint">@string/catalog_name_hint</string>
+    <string name="pago_title">Método de pago</string>
+    <string name="pago_plan_label">Plan seleccionado</string>
+    <string name="pago_total_label">Total</string>
+    <string name="pago_precio_demo">Precio por definir</string>
+    <string name="pago_mercadopago_btn">Continuar con Mercado Pago</string>
+    <string name="pago_security_note">El pago se procesará mediante el proveedor seguro cuando esté disponible.</string>
+    <string name="vendor_categories_label">Categorías</string>
+</resources>

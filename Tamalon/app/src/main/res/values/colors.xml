@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Paleta clara: Android usa estos valores por defecto. -->
+    <color name="tamalon_background">#F1E8D9</color>
+    <color name="tamalon_surface">#FBF7F0</color>
+    <color name="tamalon_surface_strong">#FFFDF9</color>
+    <color name="tamalon_sand">#E7D6BA</color>
+    <color name="tamalon_sand_strong">#D8C3A5</color>
+    <color name="tamalon_field_text">#4A4036</color>
+    <color name="tamalon_ink">#262522</color>
+    <color name="tamalon_muted">#A7A7A7</color>
+    <color name="tamalon_heading_muted">#717171</color>
+    <color name="tamalon_line">#D7C2A2</color>
+    <color name="tamalon_red">#EF6259</color>
+    <color name="tamalon_blue">#2D9BEA</color>
+    <color name="tamalon_green">#20B568</color>
+    <color name="tamalon_premium">#332B22</color>
+    <color name="tamalon_gold">#E3C17E</color>
+    <color name="tamalon_white">#FFFFFF</color>
+    <color name="tamalon_transparent">#00000000</color>
+
+    <color name="tamalon_map_light">#EEE9DF</color>
+    <color name="tamalon_map_mid">#E2D9CC</color>
+    <color name="tamalon_map_dark">#E6DDD0</color>
+    <color name="tamalon_premium_border">#B99A66</color>
+    <color name="tamalon_premium_foreground">#FFFDF9</color>
+    <color name="tamalon_premium_detail">#E0D5C8</color>
+    <color name="tamalon_premium_muted">#A99D8F</color>
+
+    <!-- Paleta oscura disponible también por nombre explícito. -->
+    <color name="tamalon_background_dark">#04080F</color>
+    <color name="tamalon_surface_dark">#0E1726</color>
+    <color name="tamalon_surface_strong_dark">#192A41</color>
+    <color name="tamalon_sand_dark">#273C5A</color>
+    <color name="tamalon_sand_strong_dark">#384D66</color>
+    <color name="tamalon_field_text_dark">#E2E8F0</color>
+    <color name="tamalon_ink_dark">#F8FAFC</color>
+    <color name="tamalon_muted_dark">#64748B</color>
+    <color name="tamalon_heading_muted_dark">#94A3B8</color>
+    <color name="tamalon_line_dark">#1E293B</color>
+    <color name="tamalon_error">#C62828</color>
+    <color name="logo_tint">#000000</color>
+</resources>

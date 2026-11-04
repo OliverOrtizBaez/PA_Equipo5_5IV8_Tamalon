@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape>
+            <solid android:color="@color/tamalon_map_light" />
+        </shape>
+    </item>
+    <item android:left="35dp" android:right="190dp">
+        <shape>
+            <solid android:color="@color/tamalon_map_mid" />
+        </shape>
+    </item>
+    <item android:left="210dp" android:right="65dp">
+        <shape>
+            <solid android:color="@color/tamalon_map_dark" />
+        </shape>
+    </item>
+</layer-list>

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Estilo base reutilizable para los botones estándar de toda la aplicación. -->
+    <style name="Tamalon.PrimaryButton" parent="Widget.Material3.Button">
+        <item name="backgroundTint">@color/tamalon_sand_strong</item>
+        <item name="android:textColor">@color/tamalon_field_text</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:fontFamily">@font/inter</item>
+        <item name="android:textSize">14sp</item>
+        <item name="cornerRadius">14dp</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+    </style>
+
+    <!-- Android interpreta el punto como herencia: Tamalon.BrandText hereda de Tamalon. -->
+    <style name="Tamalon" />
+
+    <style name="Tamalon.BrandText">
+        <item name="android:fontFamily">@font/a_calling_regular</item>
+        <item name="android:textColor">@color/tamalon_ink</item>
+        <item name="android:textSize">@dimen/brand_text</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <style name="Tamalon.SectionTitle">
+        <item name="android:fontFamily">@font/a_calling_regular</item>
+        <item name="android:textColor">@color/tamalon_heading_muted</item>
+        <item name="android:textSize">20sp</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <style name="Tamalon.Body">
+        <item name="android:fontFamily">@font/inter</item>
+        <item name="android:textColor">@color/tamalon_ink</item>
+        <item name="android:textSize">@dimen/content_text</item>
+    </style>
+
+    <style name="Tamalon.Caption">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:textColor">@color/tamalon_muted</item>
+        <item name="android:textSize">@dimen/small_text</item>
+    </style>
+
+    <style name="Tamalon.Card">
+        <item name="android:background">@drawable/bg_surface_card</item>
+        <item name="android:padding">14dp</item>
+    </style>
+
+    <style name="Tamalon.MenuButton">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">54dp</item>
+        <item name="android:layout_marginBottom">9dp</item>
+        <item name="android:background">@drawable/bg_surface_card</item>
+        <item name="android:fontFamily">@font/inter</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:paddingHorizontal">14dp</item>
+        <item name="android:textColor">@color/tamalon_ink</item>
+        <item name="android:textSize">10sp</item>
+        <item name="android:textAllCaps">false</item>
+    </style>
+
+    <style name="Tamalon.NavButton">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:background">@color/tamalon_transparent</item>
+        <item name="android:fontFamily">@font/inter</item>
+        <item name="android:gravity">center</item>
+        <item name="android:padding">4dp</item>
+        <item name="android:textColor">@color/tamalon_field_text</item>
+        <item name="android:textSize">7sp</item>
+        <item name="android:textAllCaps">false</item>
+    </style>
+</resources>

@@ -1,0 +1,22 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Base.Theme.Tamalon" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/tamalon_field_text</item>
+        <item name="colorOnPrimary">@color/tamalon_surface</item>
+        <item name="colorSecondary">@color/tamalon_sand</item>
+        <item name="colorOnSecondary">@color/tamalon_field_text</item>
+        <item name="colorAccent">@color/tamalon_field_text</item>
+        <item name="colorControlActivated">@color/tamalon_field_text</item>
+        <item name="android:colorAccent">@color/tamalon_field_text</item>
+        <item name="android:colorControlActivated">@color/tamalon_field_text</item>
+        <item name="colorSurface">@color/tamalon_surface</item>
+        <item name="colorOnSurface">@color/tamalon_ink</item>
+        <item name="colorSurfaceVariant">@color/tamalon_surface_strong</item>
+        <item name="colorOnSurfaceVariant">@color/tamalon_heading_muted</item>
+        <item name="colorError">@color/tamalon_error</item>
+        <item name="materialButtonStyle">@style/Tamalon.PrimaryButton</item>
+        <item name="android:buttonStyle">@style/Tamalon.PrimaryButton</item>
+    </style>
+
+    <style name="Theme.Tamalon" parent="Base.Theme.Tamalon" />
+</resources>

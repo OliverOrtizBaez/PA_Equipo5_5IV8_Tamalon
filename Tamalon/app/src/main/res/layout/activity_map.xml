@@ -1,0 +1,585 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pantalla del mapa. Preparado para osmdroid (OpenStreetMap).
+     map_container: FrameLayout donde MapaActivity infla el MapView de osmdroid. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/tamalon_background">
+
+    <!-- Contenedor del mapa (osmdroid MapView se añade programáticamente) -->
+    <FrameLayout
+        android:id="@+id/map_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/tamalon_background"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="28dp">
+            <ImageView
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:contentDescription="Mapa de puestos"
+                android:src="@drawable/ic_map" />
+            <TextView
+                style="@style/Tamalon.SectionTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:gravity="center"
+                android:text="Descubre antojitos cerca de ti" />
+            <TextView
+                style="@style/Tamalon.Body"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center"
+                android:text="El mapa interactivo y los puestos en tiempo real se mostrarán cuando se conecte el servicio de ubicación." />
+            <TextView
+                style="@style/Tamalon.Caption"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/bg_chip"
+                android:padding="10dp"
+                android:text="Vista de demostración" />
+        </LinearLayout>
+    </FrameLayout>
+
+    <!-- Overlay: sin permiso de ubicación -->
+    <LinearLayout
+        android:id="@+id/map_overlay_permission"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#e6f0e8d0"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="32dp"
+        android:visibility="gone">
+
+        <TextView
+            style="@style/Tamalon.Body"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="@string/map_permission_denied"
+            android:textSize="11sp" />
+
+        <android.widget.Button
+            android:id="@+id/map_btn_grant_permission"
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_button"
+            android:backgroundTint="@null"
+            android:fontFamily="@font/inter"
+            android:text="@string/map_btn_grant"
+            android:textAllCaps="false"
+            android:textColor="@color/tamalon_field_text"
+            android:textSize="10sp" />
+    </LinearLayout>
+
+    <!-- Overlay: cargando -->
+    <LinearLayout
+        android:id="@+id/map_overlay_loading"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#ccfaf7ef"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <ProgressBar
+            android:layout_width="36dp"
+            android:layout_height="36dp" />
+
+        <TextView
+            android:id="@+id/map_loading_text"
+            style="@style/Tamalon.Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/map_loading" />
+    </LinearLayout>
+
+    <!-- Overlay: error -->
+    <LinearLayout
+        android:id="@+id/map_overlay_error"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#e6f5d8d4"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="32dp"
+        android:visibility="gone">
+
+        <TextView
+            style="@style/Tamalon.Body"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="@string/map_error"
+            android:textColor="#8f322d"
+            android:textSize="11sp" />
+
+        <android.widget.Button
+            android:id="@+id/map_btn_retry"
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_button"
+            android:backgroundTint="@null"
+            android:fontFamily="@font/inter"
+            android:text="@string/btn_retry"
+            android:textAllCaps="false"
+            android:textColor="@color/tamalon_field_text"
+            android:textSize="10sp" />
+    </LinearLayout>
+
+    <!-- Overlay: sin conexión -->
+    <LinearLayout
+        android:id="@+id/map_overlay_offline"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#e6f0e8c0"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="32dp"
+        android:visibility="gone">
+
+        <TextView
+            style="@style/Tamalon.Body"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="@string/map_offline"
+            android:textColor="#775d2f"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+    <!-- Barra superior flotante: marca y recuadro de notificaciones en la parte superior derecha -->
+    <LinearLayout
+        android:id="@+id/map_top_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:layout_marginStart="18dp"
+        android:layout_marginTop="38dp"
+        android:layout_marginEnd="18dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/Tamalon.BrandText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/app_name"
+                android:textSize="22sp" />
+
+            <TextView
+                style="@style/Tamalon.Caption"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Puestos activos en tu zona"
+                android:textColor="@color/tamalon_muted"
+                android:textSize="8sp" />
+        </LinearLayout>
+
+        <!-- Recuadro con la campanita de notificaciones a la parte superior derecha -->
+        <FrameLayout
+            android:id="@+id/map_btn_notifications"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/bg_surface_card"
+            android:clickable="true"
+            android:contentDescription="@string/notifications_title"
+            android:elevation="4dp"
+            android:focusable="true">
+
+            <ImageView
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:layout_gravity="center"
+                android:contentDescription="@string/notifications_title"
+                android:src="@drawable/ic_bell" />
+
+            <!-- Indicador activo de notificación -->
+            <View
+                android:id="@+id/map_notification_badge"
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:layout_gravity="top|end"
+                android:layout_marginTop="9dp"
+                android:layout_marginEnd="9dp"
+                android:background="@drawable/bg_circle"
+                android:backgroundTint="#d97706" />
+        </FrameLayout>
+    </LinearLayout>
+
+    <!-- Búsqueda del mapa: separada más abajo para no interferir con la cámara frontal en pantallas modernas -->
+    <LinearLayout
+        android:id="@+id/map_search_container"
+        android:layout_width="match_parent"
+        android:layout_height="42dp"
+        android:layout_gravity="top"
+        android:layout_marginStart="18dp"
+        android:layout_marginTop="96dp"
+        android:layout_marginEnd="18dp"
+        android:background="@drawable/bg_nav"
+        android:elevation="3dp"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="12dp">
+
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:contentDescription="Buscar"
+            android:src="@drawable/ic_search"
+            android:tint="@color/tamalon_field_text" />
+
+        <EditText
+            android:id="@+id/map_search_input"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:background="@color/tamalon_transparent"
+            android:hint="Buscar puestos o antojitos..."
+            android:imeOptions="actionSearch"
+            android:inputType="textCapSentences"
+            android:paddingHorizontal="0dp"
+            android:singleLine="true"
+            android:textColor="@color/tamalon_ink"
+            android:textColorHint="@color/tamalon_muted"
+            android:textSize="10sp" />
+    </LinearLayout>
+
+    <!-- Preferencias y filtros de antojitos: ubicado abajo del buscador -->
+    <HorizontalScrollView
+        android:id="@+id/map_category_scroll"
+        android:layout_width="match_parent"
+        android:layout_height="46dp"
+        android:layout_gravity="top"
+        android:layout_marginTop="148dp"
+        android:clipToPadding="false"
+        android:fillViewport="false"
+        android:overScrollMode="never"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:id="@+id/map_category_filters"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="horizontal" />
+    </HorizontalScrollView>
+
+    <!-- Controles flotantes: zoom -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="90dp"
+        android:orientation="vertical">
+
+        <android.widget.Button
+            android:id="@+id/map_btn_zoom_in"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_zoom_button"
+            android:backgroundTint="@null"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:padding="0dp"
+            android:text="+"
+            android:textColor="@color/tamalon_ink"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <android.widget.Button
+            android:id="@+id/map_btn_zoom_out"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginTop="4dp"
+            android:background="@drawable/bg_zoom_button"
+            android:backgroundTint="@null"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:padding="0dp"
+            android:text="−"
+            android:textColor="@color/tamalon_ink"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- Rectángulo de estado de ruta del vendedor -->
+    <LinearLayout
+        android:id="@+id/vendor_route_card"
+        style="@style/Tamalon.Card"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="82dp"
+        android:elevation="8dp"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:visibility="gone">
+
+        <!-- Fila de título y control switch -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <!-- Indicador visual y textos -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <View
+                    android:id="@+id/vendor_route_dot"
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:background="@drawable/bg_circle"
+                    android:backgroundTint="#9e9e9e" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        style="@style/Tamalon.Caption"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="ESTADO DE MI RUTA"
+                        android:textSize="8sp" />
+
+                    <TextView
+                        android:id="@+id/vendor_route_state_text"
+                        style="@style/Tamalon.Body"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Fuera de ruta"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Interruptor / botón para activar o desactivar -->
+            <android.widget.Button
+                android:id="@+id/map_btn_toggle_availability"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:background="@drawable/bg_button"
+                android:backgroundTint="@null"
+                android:fontFamily="@font/inter"
+                android:paddingHorizontal="16dp"
+                android:text="Activar ruta"
+                android:textAllCaps="false"
+                android:textColor="@color/tamalon_field_text"
+                android:textSize="10sp" />
+        </LinearLayout>
+
+        <!-- Texto explicativo de ambos estados -->
+        <TextView
+            android:id="@+id/vendor_route_explanation"
+            style="@style/Tamalon.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Fuera de ruta: no estás ofreciendo tu ubicación en el mapa para clientes."
+            android:textColor="@color/tamalon_muted"
+            android:textSize="9sp" />
+
+        <!-- Accesos rápidos claros y pequeños: Mis catálogos y Mis rutas -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal">
+
+            <android.widget.Button
+                android:id="@+id/vendor_quick_catalogs"
+                android:layout_width="0dp"
+                android:layout_height="36dp"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_surface_card"
+                android:backgroundTint="@null"
+                android:drawableStart="@drawable/ic_list"
+                android:drawablePadding="6dp"
+                android:fontFamily="@font/inter"
+                android:gravity="center"
+                android:paddingHorizontal="10dp"
+                android:text="Mis catálogos"
+                android:textAllCaps="false"
+                android:textColor="@color/tamalon_ink"
+                android:textSize="9sp" />
+
+            <android.widget.Button
+                android:id="@+id/vendor_quick_routes"
+                android:layout_width="0dp"
+                android:layout_height="36dp"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_surface_card"
+                android:backgroundTint="@null"
+                android:drawableStart="@drawable/ic_navigation"
+                android:drawablePadding="6dp"
+                android:fontFamily="@font/inter"
+                android:gravity="center"
+                android:paddingHorizontal="10dp"
+                android:text="Mis rutas"
+                android:textAllCaps="false"
+                android:textColor="@color/tamalon_ink"
+                android:textSize="9sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Tarjeta flotante con descripción del puesto seleccionado en el mapa -->
+    <LinearLayout
+        android:id="@+id/map_selected_vendor_card"
+        style="@style/Tamalon.Card"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="82dp"
+        android:elevation="8dp"
+        android:orientation="vertical"
+        android:padding="14dp"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:id="@+id/map_card_avatar"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/bg_circle"
+                android:contentDescription="Foto de vendedor"
+                android:padding="8dp"
+                android:src="@drawable/ic_user" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/map_card_vendor_name"
+                    style="@style/Tamalon.Body"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Puesto de Antojitos"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/map_card_vendor_distance"
+                    style="@style/Tamalon.Caption"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="A 180 m de ti · En ruta activa"
+                    android:textColor="#2e7d32"
+                    android:textSize="8sp" />
+            </LinearLayout>
+
+            <ImageButton
+                android:id="@+id/map_card_btn_close"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="@color/tamalon_transparent"
+                android:contentDescription="Cerrar"
+                android:src="@drawable/ic_chevron"
+                android:rotation="90"
+                android:tint="@color/tamalon_muted" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/map_card_vendor_description"
+            style="@style/Tamalon.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:text="Especialidad en tamales verdes, de dulce, oaxaqueños y atole caliente de masa y champurrado."
+            android:textColor="@color/tamalon_field_text"
+            android:textSize="9sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal">
+
+            <android.widget.Button
+                android:id="@+id/map_card_btn_catalog"
+                android:layout_width="0dp"
+                android:layout_height="38dp"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_button"
+                android:backgroundTint="@null"
+                android:fontFamily="@font/inter"
+                android:text="Ver Catálogo"
+                android:textAllCaps="false"
+                android:textColor="@color/tamalon_field_text"
+                android:textSize="9sp" />
+
+            <android.widget.Button
+                android:id="@+id/map_card_btn_profile"
+                android:layout_width="0dp"
+                android:layout_height="38dp"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_surface_card"
+                android:backgroundTint="@null"
+                android:fontFamily="@font/inter"
+                android:text="Ver Perfil"
+                android:textAllCaps="false"
+                android:textColor="@color/tamalon_ink"
+                android:textSize="9sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <include
+        layout="@layout/layout_bottom_nav"
+        android:layout_width="match_parent"
+        android:layout_height="58dp"
+        android:layout_gravity="bottom"
+        android:layout_marginHorizontal="18dp"
+        android:layout_marginBottom="16dp" />
+</FrameLayout>

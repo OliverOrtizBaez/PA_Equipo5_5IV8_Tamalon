@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- RF23.1 Vendedor reporta Cliente / RF23.2 Cliente reporta Vendedor -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/tamalon_background"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="@dimen/screen_horizontal"
+        android:paddingTop="@dimen/screen_top"
+        android:paddingBottom="24dp">
+
+        <android.widget.Button
+            android:id="@+id/report_btn_back"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:background="@color/tamalon_transparent"
+            android:drawableStart="@drawable/ic_arrow"
+            android:drawablePadding="6dp"
+            android:text="@string/btn_back"
+            android:textAllCaps="false"
+            android:textColor="@color/tamalon_field_text"
+            android:textSize="9sp" 
+            android:visibility="gone" />
+
+        <TextView
+            style="@style/Tamalon.SectionTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="@string/report_user_title"
+            android:textColor="@color/tamalon_ink"
+            android:textSize="22sp" />
+
+        <!-- Identificación del usuario a reportar -->
+        <LinearLayout
+            style="@style/Tamalon.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="13dp">
+
+            <ImageView
+                android:layout_width="44px"
+                android:layout_height="44dp"
+                android:background="@drawable/bg_circle"
+                android:contentDescription="@string/report_target_label"
+                android:src="@drawable/ic_user" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    style="@style/Tamalon.Caption"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:letterSpacing="0.08"
+                    android:text="@string/report_target_label" />
+
+                <TextView
+                    android:id="@+id/report_target_name"
+                    style="@style/Tamalon.Body"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/profile_user_placeholder"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    style="@style/Tamalon.Caption"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="ID obtenido del perfil al integrar backend"
+                    android:textSize="7sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Campo de motivo -->
+        <TextView
+            style="@style/Tamalon.Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:text="@string/report_reason_label" />
+
+        <EditText
+            android:id="@+id/report_reason"
+            android:layout_width="match_parent"
+            android:layout_height="130dp"
+            android:layout_marginTop="5dp"
+            android:background="@drawable/bg_input"
+            android:gravity="top|start"
+            android:hint="@string/report_reason_hint"
+            android:inputType="textMultiLine|textCapSentences"
+            android:maxLength="501"
+            android:padding="10dp"
+            android:textSize="10sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:orientation="horizontal">
+
+            <TextView
+                style="@style/Tamalon.Caption"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/report_reason_length" />
+
+            <TextView
+                android:id="@+id/report_char_counter"
+                style="@style/Tamalon.Caption"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0 / 500" />
+        </LinearLayout>
+
+        <!-- Estado del envío -->
+        <TextView
+            android:id="@+id/report_status"
+            style="@style/Tamalon.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_surface_card"
+            android:padding="10dp"
+            android:text=""
+            android:textSize="9sp"
+            android:visibility="gone" />
+
+        <!-- Botones de acción -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:orientation="horizontal">
+
+            <android.widget.Button
+                android:id="@+id/report_cancel"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_surface_card"
+                android:fontFamily="@font/inter"
+                android:text="@string/report_cancel"
+                android:textAllCaps="false"
+                android:textColor="@color/tamalon_field_text"
+                android:textSize="10sp" />
+
+            <android.widget.Button
+                android:id="@+id/report_submit"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_button"
+                android:enabled="false"
+                android:fontFamily="@font/inter"
+                android:text="@string/report_submit"
+                android:textAllCaps="false"
+                android:textColor="@color/tamalon_field_text"
+                android:textSize="10sp" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

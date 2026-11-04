@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/tamalon_background"
+    android:fillViewport="true">
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingHorizontal="@dimen/screen_horizontal" android:paddingTop="@dimen/screen_top" android:paddingBottom="30dp">
+        <include layout="@layout/layout_profile_app_header" />
+        <android.widget.Button android:id="@+id/back_to_profile" android:layout_width="wrap_content" android:layout_height="36dp" android:background="@color/tamalon_transparent" android:drawableStart="@drawable/ic_arrow" android:drawablePadding="6dp" android:text="Volver a mi perfil" android:textAllCaps="false" android:textColor="@color/tamalon_field_text" android:textSize="9sp" 
+            android:visibility="gone" />
+
+        <LinearLayout style="@style/Tamalon.Card" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
+            <TextView style="@style/Tamalon.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:letterSpacing="0.12" android:text="PEDIDOS RECIENTES" />
+            <TextView style="@style/Tamalon.SectionTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="Historial de Pedidos" android:textColor="@color/tamalon_ink" android:textSize="24sp" />
+            <TextView style="@style/Tamalon.Caption" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="7dp" android:text="Consulta tus compras anteriores y vuelve a pedir tus favoritos." />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="160dp" android:layout_marginTop="14dp" android:background="@drawable/bg_empty" android:gravity="center" android:orientation="vertical" android:padding="24dp">
+            <ImageView android:layout_width="34dp" android:layout_height="34dp" android:contentDescription="Historial vacío" android:src="@drawable/ic_clock" />
+            <TextView style="@style/Tamalon.Body" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="Aún no tienes pedidos" android:textSize="12sp" android:textStyle="bold" />
+            <TextView style="@style/Tamalon.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:gravity="center" android:text="Cuando conectes los vendedores, tus compras aparecerán aquí" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

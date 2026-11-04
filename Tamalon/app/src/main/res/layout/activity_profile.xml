@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/tamalon_background">
+
+    <ScrollView android:layout_width="match_parent" android:layout_height="match_parent" android:fillViewport="true">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingHorizontal="@dimen/screen_horizontal" android:paddingTop="@dimen/screen_top" android:paddingBottom="108dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="66dp" android:gravity="bottom" android:orientation="horizontal" android:paddingBottom="9dp">
+                <TextView style="@style/Tamalon.BrandText" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="@string/app_name" />
+                <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="end" android:orientation="vertical">
+                    <TextView style="@style/Tamalon.SectionTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/profile_title" />
+                    <TextView android:id="@+id/profile_user_name" style="@style/Tamalon.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/profile_user_placeholder" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout style="@style/Tamalon.Card" android:layout_width="match_parent" android:layout_height="92dp" android:gravity="center_vertical" android:orientation="horizontal">
+                <ImageView android:id="@+id/profile_avatar" android:layout_width="58dp" android:layout_height="58dp" android:background="@drawable/bg_circle" android:clipToOutline="true" android:contentDescription="@string/profile_photo_label" android:scaleType="centerCrop" android:src="@drawable/ic_user" />
+                <TextView android:id="@+id/profile_name_card" style="@style/Tamalon.Body" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="18dp" android:text="@string/profile_user_placeholder" android:textSize="14sp" android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout android:id="@+id/profile_favorites_card" style="@style/Tamalon.Card" android:layout_width="match_parent" android:layout_height="58dp" android:layout_marginTop="16dp" android:gravity="center_vertical" android:orientation="horizontal" android:paddingHorizontal="16dp">
+                <ImageView android:layout_width="22dp" android:layout_height="22dp" android:contentDescription="Favoritos" android:src="@drawable/ic_heart" />
+                <TextView style="@style/Tamalon.Body" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="12dp" android:text="Mis favoritos" android:textSize="11sp" android:textStyle="bold" />
+                <TextView android:id="@+id/profile_favorites_count" style="@style/Tamalon.SectionTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textSize="18sp" />
+            </LinearLayout>
+
+
+            <TextView style="@style/Tamalon.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="19dp" android:layout_marginBottom="12dp" android:text="@string/settings_section_account" />
+            <android.widget.Button android:id="@+id/open_personal" style="@style/Tamalon.MenuButton" android:drawableStart="@drawable/ic_user" android:drawableEnd="@drawable/ic_chevron" android:drawablePadding="12dp" android:text="@string/profile_personal_data" />
+            <android.widget.Button android:id="@+id/open_preferences" style="@style/Tamalon.MenuButton" android:drawableStart="@drawable/ic_settings" android:drawableEnd="@drawable/ic_chevron" android:drawablePadding="12dp" android:text="Configuración" />
+            <android.widget.Button android:id="@+id/open_support" style="@style/Tamalon.MenuButton" android:drawableStart="@drawable/ic_settings" android:drawableEnd="@drawable/ic_chevron" android:drawablePadding="12dp" android:text="Privacidad y seguridad" />
+            <android.widget.Button android:id="@+id/open_catalogs" style="@style/Tamalon.MenuButton" android:drawableStart="@drawable/ic_list" android:drawableEnd="@drawable/ic_chevron" android:drawablePadding="12dp" android:text="Mis catálogos" android:visibility="gone" />
+            <android.widget.Button android:id="@+id/open_premium" android:layout_width="match_parent" android:layout_height="58dp" android:layout_marginTop="3dp" android:background="@drawable/bg_premium" android:drawableStart="@drawable/ic_star" android:drawableEnd="@drawable/ic_chevron" android:drawablePadding="10dp" android:fontFamily="@font/inter" android:gravity="center_vertical" android:paddingHorizontal="14dp" android:text="@string/settings_upgrade" android:textColor="#FFFFFF" android:textSize="9sp" />
+            <android.widget.Button android:id="@+id/profile_logout" android:layout_width="match_parent" android:layout_height="48dp" android:layout_marginTop="16dp" android:background="@drawable/bg_button_destructive" android:fontFamily="@font/inter" android:text="Cerrar sesión" android:textAllCaps="false" android:textColor="#FFFFFF" android:textSize="11sp" />
+        </LinearLayout>
+    </ScrollView>
+
+    <include layout="@layout/layout_bottom_nav" android:layout_width="match_parent" android:layout_height="58dp" android:layout_gravity="bottom" android:layout_marginHorizontal="18dp" android:layout_marginBottom="16dp" />
+</FrameLayout>

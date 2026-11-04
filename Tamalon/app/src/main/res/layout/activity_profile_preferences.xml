@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@color/tamalon_background" android:fillViewport="true">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:paddingHorizontal="@dimen/screen_horizontal"
+        android:paddingTop="@dimen/screen_top" android:paddingBottom="30dp">
+        <include layout="@layout/layout_profile_app_header" />
+        <android.widget.Button android:id="@+id/back_to_profile" android:layout_width="wrap_content" android:layout_height="36dp"
+            android:background="@color/tamalon_transparent" android:drawableStart="@drawable/ic_arrow"
+            android:drawablePadding="6dp" android:text="Volver a mi perfil" android:textAllCaps="false"
+            android:textColor="@color/tamalon_field_text" android:textSize="9sp" 
+            android:visibility="gone" />
+        <LinearLayout style="@style/Tamalon.Card" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:padding="18dp" android:layout_marginTop="12dp">
+            <TextView style="@style/Tamalon.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="CUENTA" />
+            <TextView style="@style/Tamalon.SectionTitle" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginTop="5dp" android:text="Configuración" android:textColor="@color/tamalon_ink" android:textSize="24sp" />
+            <TextView style="@style/Tamalon.Caption" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="7dp" android:text="Configura tus avisos y revisa los permisos que Tamalón necesita para funcionar." />
+        </LinearLayout>
+        <LinearLayout style="@style/Tamalon.Card" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:padding="14dp" android:layout_marginTop="14dp">
+            <TextView style="@style/Tamalon.Body" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="Notificaciones" android:textStyle="bold" android:textSize="14sp" />
+            <TextView style="@style/Tamalon.Caption" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="5dp" android:text="Puedes activar esta preferencia si tienes Premium. Los avisos automáticos se enviarán cuando el servicio de notificaciones esté conectado." />
+            <CheckBox android:id="@+id/nearby_notifications" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="12dp" android:padding="10dp" android:text="Activar notificaciones de vendedores favoritos"
+                android:textColor="@color/tamalon_field_text" android:textSize="11sp" />
+        </LinearLayout>
+        <LinearLayout style="@style/Tamalon.Card" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:padding="14dp" android:layout_marginTop="14dp">
+            <TextView style="@style/Tamalon.Body" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="Ubicación y permisos" android:textStyle="bold" android:textSize="14sp" />
+            <TextView style="@style/Tamalon.Caption" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="5dp" android:text="La ubicación permite mostrar vendedores cercanos y compartir la posición de tu puesto cuando inicias una ruta. Puedes revisar o cambiar los permisos del dispositivo." />
+            <android.widget.Button android:id="@+id/open_app_permissions" style="@style/Tamalon.MenuButton"
+                android:layout_marginTop="10dp" android:drawableEnd="@drawable/ic_chevron"
+                android:text="Administrar permisos de Tamalón" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

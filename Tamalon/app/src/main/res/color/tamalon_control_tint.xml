@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true" android:color="@color/tamalon_sand_strong" />
+    <item android:state_checked="true" android:color="@color/tamalon_field_text" />
+    <item android:color="@color/tamalon_heading_muted" />
+</selector>

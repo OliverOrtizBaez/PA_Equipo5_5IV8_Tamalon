@@ -1,0 +1,327 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pantalla de búsqueda y lista de vendedores de antojitos con filtros de zona y detalle de selección. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/tamalon_background">
+
+    <ScrollView
+        android:id="@+id/list_scroll_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="@dimen/screen_horizontal"
+            android:paddingTop="38dp"
+            android:paddingBottom="108dp">
+
+            <!-- Cabecera superior con marca y recuadro de notificaciones en la parte superior derecha -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        style="@style/Tamalon.BrandText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/app_name"
+                        android:textSize="22sp" />
+
+                    <TextView
+                        style="@style/Tamalon.Caption"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="BUSCADOR DE ANTOJITOS"
+                        android:textColor="@color/tamalon_muted"
+                        android:textSize="8sp" />
+                </LinearLayout>
+
+                <!-- Recuadro con la campanita de notificaciones a la parte superior derecha -->
+                <FrameLayout
+                    android:id="@+id/list_btn_notifications"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:background="@drawable/bg_surface_card"
+                    android:clickable="true"
+                    android:contentDescription="@string/notifications_title"
+                    android:elevation="4dp"
+                    android:focusable="true">
+
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:layout_gravity="center"
+                        android:contentDescription="@string/notifications_title"
+                        android:src="@drawable/ic_bell" />
+
+                    <!-- Indicador de notificación activa -->
+                    <View
+                        android:id="@+id/list_notification_badge"
+                        android:layout_width="8dp"
+                        android:layout_height="8dp"
+                        android:layout_gravity="top|end"
+                        android:layout_marginTop="9dp"
+                        android:layout_marginEnd="9dp"
+                        android:background="@drawable/bg_circle"
+                        android:backgroundTint="#d97706" />
+                </FrameLayout>
+            </LinearLayout>
+
+            <!-- Buscador: posicionado más abajo con margen generoso para librar cámaras y notches modernos -->
+            <LinearLayout
+                android:id="@+id/list_search_container"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/bg_nav"
+                android:elevation="3dp"
+                android:gravity="center_vertical"
+                android:paddingHorizontal="14dp">
+
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:contentDescription="Buscar"
+                    android:src="@drawable/ic_search"
+                    android:tint="@color/tamalon_field_text" />
+
+                <EditText
+                    android:id="@+id/list_search"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="10dp"
+                    android:layout_weight="1"
+                    android:background="@color/tamalon_transparent"
+                    android:hint="Buscar vendedores o antojitos en tu zona..."
+                    android:imeOptions="actionSearch"
+                    android:inputType="textCapSentences"
+                    android:singleLine="true"
+                    android:textColor="@color/tamalon_ink"
+                    android:textColorHint="@color/tamalon_muted"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <!-- Filtros de categorías / antojitos (horizontal) -->
+            <HorizontalScrollView
+                android:id="@+id/list_category_scroll"
+                android:layout_width="match_parent"
+                android:layout_height="46dp"
+                android:layout_marginTop="12dp"
+                android:clipToPadding="false"
+                android:fillViewport="false"
+                android:overScrollMode="never"
+                android:scrollbars="none">
+
+                <LinearLayout
+                    android:id="@+id/list_category_filters"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal" />
+            </HorizontalScrollView>
+
+            <!-- Recuadro con la descripción del puesto seleccionado -->
+            <LinearLayout
+                android:id="@+id/list_selected_card"
+                style="@style/Tamalon.Card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:elevation="6dp"
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:id="@+id/list_selected_avatar"
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:background="@drawable/bg_circle"
+                        android:contentDescription="Foto del vendedor"
+                        android:padding="8dp"
+                        android:src="@drawable/ic_user" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/list_selected_name"
+                            style="@style/Tamalon.Body"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Puesto Seleccionado"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/list_selected_status"
+                            style="@style/Tamalon.Caption"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="● En ruta activa · Radio 3 km"
+                            android:textColor="#2e7d32"
+                            android:textSize="8sp" />
+                    </LinearLayout>
+
+                    <ImageButton
+                        android:id="@+id/list_selected_btn_close"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:background="@color/tamalon_transparent"
+                        android:contentDescription="Cerrar descripción"
+                        android:src="@drawable/ic_chevron"
+                        android:rotation="90"
+                        android:tint="@color/tamalon_muted" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/list_selected_description"
+                    style="@style/Tamalon.Body"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:lineSpacingExtra="2dp"
+                    android:text="Especialidad en tamales caseros oaxaqueños, verdes, de mole y de rajas. Atole calientito recién preparado."
+                    android:textColor="@color/tamalon_field_text"
+                    android:textSize="10sp" />
+
+                <!-- Acciones del puesto seleccionado -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:orientation="horizontal">
+
+                    <android.widget.Button
+                        android:id="@+id/list_selected_btn_catalog"
+                        android:layout_width="0dp"
+                        android:layout_height="40dp"
+                        android:layout_marginEnd="6dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_button"
+                        android:backgroundTint="@null"
+                        android:fontFamily="@font/inter"
+                        android:text="Ver Catálogo"
+                        android:textAllCaps="false"
+                        android:textColor="@color/tamalon_field_text"
+                        android:textSize="9sp" />
+
+                    <android.widget.Button
+                        android:id="@+id/list_selected_btn_favorite"
+                        android:layout_width="0dp"
+                        android:layout_height="40dp"
+                        android:layout_marginStart="6dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_surface_card"
+                        android:backgroundTint="@null"
+                        android:fontFamily="@font/inter"
+                        android:text="Guardar Puesto"
+                        android:textAllCaps="false"
+                        android:textColor="@color/tamalon_ink"
+                        android:textSize="9sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Título de la sección de puestos en la zona -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:layout_marginBottom="10dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    style="@style/Tamalon.Caption"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="VENDEDORES EN TU ZONA (RADIO 3 KM)" />
+
+                <TextView
+                    android:id="@+id/list_count_badge"
+                    style="@style/Tamalon.Caption"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_badge"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="3dp"
+                    android:text="0 puestos"
+                    android:textSize="8sp" />
+            </LinearLayout>
+
+            <!-- Espacio para el estado vacío -->
+            <LinearLayout
+                android:id="@+id/list_empty_state"
+                android:layout_width="match_parent"
+                android:layout_height="160dp"
+                android:background="@drawable/bg_empty"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="24dp">
+
+                <ImageView
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:contentDescription="Lista vacía"
+                    android:src="@drawable/ic_list" />
+
+                <TextView
+                    style="@style/Tamalon.Body"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="No hay puestos que coincidan con la búsqueda"
+                    android:textSize="11sp" />
+
+                <TextView
+                    style="@style/Tamalon.Caption"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:text="Prueba seleccionando otro antojito o borrando el filtro"
+                    android:textSize="9sp" />
+            </LinearLayout>
+
+            <!-- Espacio donde aparecen todos los vendedores de la zona -->
+            <LinearLayout
+                android:id="@+id/list_results"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone" />
+
+        </LinearLayout>
+    </ScrollView>
+
+    <include
+        layout="@layout/layout_bottom_nav"
+        android:layout_width="match_parent"
+        android:layout_height="58dp"
+        android:layout_gravity="bottom"
+        android:layout_marginHorizontal="18dp"
+        android:layout_marginBottom="16dp" />
+</FrameLayout>

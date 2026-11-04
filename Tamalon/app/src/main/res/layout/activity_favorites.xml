@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/tamalon_background">
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:paddingHorizontal="@dimen/screen_horizontal" android:paddingTop="@dimen/screen_top" android:paddingBottom="108dp">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="66dp" android:gravity="bottom" android:orientation="horizontal" android:paddingBottom="9dp">
+            <TextView style="@style/Tamalon.BrandText" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Tamalón" />
+            <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="end" android:orientation="vertical">
+                <TextView style="@style/Tamalon.SectionTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="FAVORITOS" />
+                <TextView style="@style/Tamalon.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Mis puestos guardados" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="66dp" android:background="@drawable/bg_chip" android:gravity="center_vertical" android:orientation="horizontal" android:paddingHorizontal="14dp">
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                <TextView style="@style/Tamalon.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="PUESTOS FAVORITOS" />
+                <TextView style="@style/Tamalon.Body" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="0 Activos Ahora" android:textSize="16sp" android:textStyle="bold" />
+            </LinearLayout>
+            <ImageView android:layout_width="34dp" android:layout_height="34dp" android:background="@drawable/bg_circle" android:contentDescription="Favoritos" android:padding="8dp" android:src="@drawable/ic_heart" />
+        </LinearLayout>
+
+        <TextView style="@style/Tamalon.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="19dp" android:layout_marginBottom="12dp" android:text="TUS GUARDADOS RECIENTES" />
+        <LinearLayout android:id="@+id/favorites_empty" android:layout_width="match_parent" android:layout_height="130dp" android:background="@drawable/bg_empty" android:gravity="center" android:orientation="vertical" android:padding="24dp">
+            <TextView style="@style/Tamalon.Body" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Todavía no guardaste ningún puesto" />
+            <TextView style="@style/Tamalon.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="Tus favoritos aparecerán en este espacio" />
+        </LinearLayout>
+        <LinearLayout android:id="@+id/favorites_results" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone" />
+    </LinearLayout>
+
+    <include layout="@layout/layout_bottom_nav" android:layout_width="match_parent" android:layout_height="58dp" android:layout_gravity="bottom" android:layout_marginHorizontal="18dp" android:layout_marginBottom="16dp" />
+</FrameLayout>

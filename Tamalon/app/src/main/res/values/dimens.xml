@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="screen_horizontal">18dp</dimen>
+    <dimen name="screen_top">36dp</dimen>
+    <dimen name="card_radius">14dp</dimen>
+    <dimen name="content_text">10sp</dimen>
+    <dimen name="small_text">8sp</dimen>
+    <dimen name="brand_text">39sp</dimen>
+</resources>

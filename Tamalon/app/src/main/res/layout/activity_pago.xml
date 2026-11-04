@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pantalla de suscripción. Premium solo se activa tras verificación real del pago en backend. -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/tamalon_background"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="@dimen/screen_horizontal"
+        android:paddingTop="@dimen/screen_top"
+        android:paddingBottom="32dp">
+
+        <android.widget.Button
+            android:id="@+id/pago_btn_back"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:background="@color/tamalon_transparent"
+            android:drawableStart="@drawable/ic_arrow"
+            android:drawablePadding="6dp"
+            android:text="@string/btn_back"
+            android:textAllCaps="false"
+            android:textColor="@color/tamalon_field_text"
+            android:textSize="9sp" 
+            android:visibility="gone" />
+
+        <TextView
+            style="@style/Tamalon.SectionTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="@string/pago_title"
+            android:textColor="@color/tamalon_ink"
+            android:textSize="22sp" />
+
+        <!-- Resumen del plan -->
+        <LinearLayout
+            style="@style/Tamalon.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                style="@style/Tamalon.Caption"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/pago_plan_label"
+                android:letterSpacing="0.08" />
+
+            <TextView
+                android:id="@+id/pago_plan_name"
+                style="@style/Tamalon.Body"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/plan_premium"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/pago_benefits"
+                style="@style/Tamalon.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:lineSpacingExtra="4dp"
+                android:text="Beneficios Premium"
+                android:textSize="9sp" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginVertical="10dp"
+                android:background="@color/tamalon_line" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    style="@style/Tamalon.Body"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/pago_total_label" />
+
+                <TextView
+                    android:id="@+id/pago_total"
+                    style="@style/Tamalon.Body"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="$49.00 MXN"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Controles heredados de simulación, desactivados -->
+        
+
+        <!-- Botón de pago real; se habilitará al conectar y verificar el backend -->
+        <android.widget.Button
+            android:id="@+id/pago_btn_mercadopago"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="20dp"
+            android:background="@drawable/bg_button"
+            android:fontFamily="@font/inter"
+            android:text="@string/pago_mercadopago_btn"
+            android:textAllCaps="false"
+            android:textColor="@color/tamalon_field_text"
+            android:textSize="11sp"
+            android:visibility="visible" />
+
+        <!-- Estado del proceso de pago -->
+        <TextView
+            android:id="@+id/pago_status"
+            style="@style/Tamalon.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_surface_card"
+            android:padding="12dp"
+            android:text=""
+            android:textSize="9sp"
+            android:visibility="gone" />
+
+        <!-- Nota de seguridad -->
+        <TextView
+            style="@style/Tamalon.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:gravity="center"
+            android:text="El pago solo se habilitará cuando la pasarela segura esté configurada. No compartas datos de tarjeta fuera del proveedor de pagos."
+            android:textSize="8sp" />
+    </LinearLayout>
+</ScrollView>

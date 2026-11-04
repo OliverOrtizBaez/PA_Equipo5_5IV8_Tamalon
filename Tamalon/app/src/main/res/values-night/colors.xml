@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        Sobrescribe los nombres semánticos usados por todos los layouts.
+        Android aplica estos valores automáticamente cuando uiMode es night.
+    -->
+    <color name="tamalon_background">#04080F</color>
+    <color name="tamalon_surface">#0E1726</color>
+    <color name="tamalon_surface_strong">#192A41</color>
+    <color name="tamalon_sand">#273C5A</color>
+    <color name="tamalon_sand_strong">#384D66</color>
+    <color name="tamalon_field_text">#E2E8F0</color>
+    <color name="tamalon_ink">#F8FAFC</color>
+    <color name="tamalon_muted">#64748B</color>
+    <color name="tamalon_heading_muted">#94A3B8</color>
+    <color name="tamalon_line">#1E293B</color>
+
+    <!-- Superficies auxiliares adaptadas para no conservar bloques claros. -->
+    <color name="tamalon_white">#0E1726</color>
+    <color name="tamalon_map_light">#0E1726</color>
+    <color name="tamalon_map_mid">#192A41</color>
+    <color name="tamalon_map_dark">#273C5A</color>
+    <color name="tamalon_premium">#192A41</color>
+    <color name="tamalon_premium_border">#384D66</color>
+    <color name="tamalon_premium_foreground">#F8FAFC</color>
+    <color name="tamalon_premium_detail">#E2E8F0</color>
+    <color name="tamalon_premium_muted">#94A3B8</color>
+    <color name="logo_tint">#FFFFFF</color>
+</resources>

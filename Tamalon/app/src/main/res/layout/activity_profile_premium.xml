@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/tamalon_background"
+    android:fillViewport="true">
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingHorizontal="@dimen/screen_horizontal" android:paddingTop="@dimen/screen_top" android:paddingBottom="30dp">
+        <include layout="@layout/layout_profile_app_header" />
+        <android.widget.Button android:id="@+id/back_to_profile" android:layout_width="wrap_content" android:layout_height="36dp" android:background="@color/tamalon_transparent" android:drawableStart="@drawable/ic_arrow" android:drawablePadding="6dp" android:text="@string/premium_back" android:textAllCaps="false" android:textColor="@color/tamalon_field_text" android:textSize="9sp" 
+            android:visibility="gone" />
+
+        <LinearLayout style="@style/Tamalon.Card" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
+            <TextView style="@style/Tamalon.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:letterSpacing="0.12" android:text="@string/premium_badge" />
+            <TextView style="@style/Tamalon.SectionTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="@string/plan_premium" android:textColor="@color/tamalon_ink" android:textSize="24sp" />
+            <TextView android:id="@+id/premium_tagline" style="@style/Tamalon.Caption" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="7dp" android:text="@string/premium_tagline" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:background="@drawable/bg_premium" android:gravity="center_horizontal" android:orientation="vertical" android:padding="20dp">
+            <ImageView android:layout_width="34dp" android:layout_height="34dp" android:contentDescription="Premium" android:src="@drawable/ic_star" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:fontFamily="@font/a_calling_regular" android:text="Todo Tamalón, sin límites" android:textColor="@color/tamalon_premium_foreground" android:textSize="23sp" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:fontFamily="@font/inter" android:lineSpacingExtra="7dp" android:text="✓ Promociones exclusivas cada semana&#10;✓ Alertas anticipadas de tus favoritos&#10;✓ Sin anuncios y con soporte prioritario" android:textColor="@color/tamalon_premium_detail" android:textSize="9sp" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="18dp" android:fontFamily="@font/inter" android:text="$49 MXN / mes" android:textColor="@color/tamalon_premium_foreground" android:textSize="23sp" android:textStyle="bold" />
+            <!-- La contratación solo estará disponible tras integrar el pago real. -->
+            <android.widget.Button android:id="@+id/subscribe_premium" android:layout_width="match_parent" android:layout_height="44dp" android:layout_marginTop="16dp" android:background="@drawable/bg_premium_action" android:fontFamily="@font/inter" android:text="@string/premium_cta" android:textColor="@color/tamalon_premium" android:textSize="10sp" android:textStyle="bold" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:fontFamily="@font/inter" android:text="@string/premium_cancel_note" android:textColor="@color/tamalon_premium_muted" android:textSize="7sp" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/tamalon_background"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:paddingHorizontal="16dp"
+        android:paddingTop="30dp"
+        android:paddingBottom="24dp">
+
+        <ImageView
+            android:layout_width="170dp"
+            android:layout_height="176dp"
+            android:contentDescription="@string/login_illustration_desc"
+            android:scaleType="centerCrop"
+            android:tint="@color/logo_tint"
+            android:src="@drawable/tamalon_illustration" />
+
+        <LinearLayout
+            android:layout_width="258dp"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_surface_card"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:padding="22dp">
+
+            <TextView
+                style="@style/Tamalon.BrandText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/app_name" />
+
+            <TextView
+                style="@style/Tamalon.SectionTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/register_title"
+                android:textSize="25sp" />
+
+            <!-- Nombre completo -->
+            <TextView
+                style="@style/Tamalon.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/register_name_label" />
+
+            <EditText
+                android:id="@+id/register_name"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginTop="4dp"
+                android:background="@drawable/bg_input"
+                android:hint="@string/register_name_hint"
+                android:inputType="textPersonName|textCapWords"
+                android:maxLength="100"
+                android:paddingHorizontal="10dp"
+                android:textSize="10sp" />
+
+            <!-- Correo -->
+            <EditText
+                android:id="@+id/register_email"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginTop="7dp"
+                android:background="@drawable/bg_input"
+                android:hint="@string/register_email_hint"
+                android:inputType="textEmailAddress"
+                android:paddingHorizontal="10dp"
+                android:textSize="10sp" />
+
+            <!-- Contraseña -->
+            <EditText
+                android:id="@+id/register_password"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginTop="7dp"
+                android:background="@drawable/bg_input"
+                android:hint="@string/register_password_hint"
+                android:inputType="textPassword"
+                android:paddingHorizontal="10dp"
+                android:textSize="10sp" />
+
+            <EditText
+                android:id="@+id/register_confirm_password"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginTop="7dp"
+                android:background="@drawable/bg_input"
+                android:hint="@string/register_confirm_hint"
+                android:inputType="textPassword"
+                android:paddingHorizontal="10dp"
+                android:textSize="10sp" />
+
+            <!-- Rol -->
+            <TextView
+                style="@style/Tamalon.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/register_rol_label" />
+
+            <RadioGroup
+                android:id="@+id/register_rol"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:orientation="horizontal">
+
+                <RadioButton
+                    android:id="@+id/register_rol_cliente"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:fontFamily="@font/inter"
+                    android:buttonTint="@color/tamalon_control_tint"
+                    android:textColor="@color/tamalon_field_text"
+                    android:text="@string/rol_cliente"
+                    android:textSize="9sp" />
+
+                <RadioButton
+                    android:id="@+id/register_rol_vendedor"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:fontFamily="@font/inter"
+                    android:buttonTint="@color/tamalon_control_tint"
+                    android:textColor="@color/tamalon_field_text"
+                    android:text="@string/rol_vendedor"
+                    android:textSize="9sp" />
+            </RadioGroup>
+
+            <CheckBox
+                android:id="@+id/register_terms"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:fontFamily="@font/inter"
+                android:buttonTint="@color/tamalon_control_tint"
+                android:textColor="@color/tamalon_field_text"
+                android:text="@string/register_terms"
+                android:textSize="8sp" />
+
+            <TextView
+                android:id="@+id/register_legal_links"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:fontFamily="@font/inter"
+                android:textSize="8sp"
+                android:lineSpacingExtra="2dp" />
+
+            <!-- Error global -->
+            <TextView
+                android:id="@+id/register_error"
+                style="@style/Tamalon.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text=""
+                android:textColor="@color/tamalon_error"
+                android:textSize="8sp"
+                android:visibility="gone" />
+
+            <android.widget.Button
+                android:id="@+id/register_submit"
+                android:layout_width="128dp"
+                android:layout_height="42dp"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_button"
+            android:backgroundTint="@null"
+                android:fontFamily="@font/inter"
+                android:text="@string/register_submit"
+                android:textAllCaps="false"
+                android:textColor="@color/tamalon_field_text"
+                android:textSize="9sp" />
+
+            <android.widget.Button
+                android:id="@+id/back_to_login"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:background="@drawable/bg_text_button"
+                android:backgroundTint="@null"
+                android:text="@string/register_back_to_login"
+                android:textAllCaps="false"
+                android:textColor="@color/tamalon_link_text"
+                android:textSize="8sp" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>
