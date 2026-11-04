@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Recuperar contraseña | Tamalon</title>
+    <style>
+        :root {
+            --fondo: #f4f5f7; --tarjeta: #ffffff; --tinta: #26221f; --tenue: #5f5a55;
+            --borde: #d6d3cf; --acento: #d35400; --acento-hover: #b84700;
+            --ok: #1e7e4f; --error: #b03a2e;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            padding: 20px; background: var(--fondo); color: var(--tinta);
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.5;
+        }
+        main { width: 100%; max-width: 400px; background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 10px; padding: 32px 28px; }
+        .marca { font-weight: 800; color: var(--acento); font-size: 1.1rem; margin: 0 0 20px; }
+        h1 { font-size: 1.5rem; line-height: 1.2; margin: 0 0 8px; }
+        p.ayuda { color: var(--tenue); margin: 0 0 22px; }
+        label { display: block; font-weight: 600; margin-bottom: 6px; }
+        input {
+            width: 100%; padding: 11px 12px; font: inherit; color: inherit;
+            border: 1px solid var(--borde); border-radius: 6px; background: #fff;
+        }
+        input:focus-visible, button:focus-visible, a:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
+        button {
+            width: 100%; margin-top: 16px; padding: 12px; font: inherit; font-weight: 700; cursor: pointer;
+            color: #fff; background: var(--acento); border: 0; border-radius: 6px;
+        }
+        button:hover { background: var(--acento-hover); }
+        button:disabled { opacity: .6; cursor: wait; }
+        .estado { margin: 16px 0 0; min-height: 1.5em; white-space: pre-line; font-weight: 600; }
+        .estado.ok { color: var(--ok); }
+        .estado.error { color: var(--error); }
+        .pie { margin: 22px 0 0; font-size: .95rem; }
+        .pie a { color: var(--acento); }
+    </style>
+</head>
+<body>
+    <main>
+        <p class="marca">Tamalon</p>
+        <h1>Recupera tu contraseña</h1>
+        <p class="ayuda">Escribe el correo de tu cuenta y te enviaremos un enlace para crear una contraseña nueva. El enlace funciona una sola vez y vence en 30 minutos.</p>
+
+        <form id="form" novalidate>
+            <label for="correo">Correo electrónico</label>
+            <input id="correo" name="correo" type="email" maxlength="100" autocomplete="email" required>
+            <button id="boton" type="submit">Enviar enlace</button>
+        </form>
+
+        <p id="estado" class="estado" role="status" aria-live="polite"></p>
+        <p class="pie"><a href="../index.html">Volver al inicio</a></p>
+    </main>
+
+    <script>
+        // En local apunta al backend en :3000; en produccion cambia la URL por la de tu servicio en Render
+        const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+            ? 'http://localhost:3000'
+            : 'https://TU-BACKEND.onrender.com';
+
+        const form = document.getElementById('form');
+        const boton = document.getElementById('boton');
+        const estado = document.getElementById('estado');
+
+        function mostrar(texto, tipo) {
+            estado.textContent = texto;
+            estado.className = `estado ${tipo}`;
+        }
+
+        async function enviarSolicitud(correo) {
+            let resp;
+            try {
+                resp = await fetch(`${API_BASE}/api/auth/recuperar`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ correo })
+                });
+            } catch (_) {
+                return { ok: false, texto: 'Sin conexión a internet. Verifica tu conexión e intenta de nuevo' };
+            }
+            let data = null;
+            try { data = await resp.json(); } catch (_) { /* sin cuerpo JSON */ }
+            return {
+                ok: resp.ok,
+                texto: (data && data.mensaje) || 'Ocurrió un error inesperado. Intenta de nuevo en unos minutos'
+            };
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const correo = document.getElementById('correo').value.trim();
+            if (!correo) return mostrar('Escribe el correo de tu cuenta', 'error');
+
+            boton.disabled = true;
+            mostrar('Enviando…', 'ok');
+            const r = await enviarSolicitud(correo);
+            boton.disabled = false;
+
+            // El servidor responde igual exista o no el correo, por seguridad
+            mostrar(r.ok ? `${r.texto}. Revisa también la carpeta de spam.` : r.texto, r.ok ? 'ok' : 'error');
+        });
+    </script>
+</body>
+</html>

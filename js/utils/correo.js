@@ -1,40 +1,43 @@
-const nodemailer = require('nodemailer');
-
-let transporte = null;
-function obtenerTransporte() {
-  if (transporte) return transporte;
-  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) return null;
-  transporte = nodemailer.createTransport({
-    service: 'gmail',
-    auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD },
-  });
-  return transporte;
-}
+// Envio del correo de recuperacion (RF3.1) con EmailJS, llamando a su API REST desde el servidor.
+// No necesita ninguna libreria extra: usa el fetch que ya trae Node.
+const ENDPOINT = 'https://api.emailjs.com/api/v1.0/email/send';
 
 /**
- * Envia el enlace de recuperacion (RF3.1). Sin credenciales de Gmail y fuera de produccion,
- * imprime el enlace en consola para poder probar el flujo sin correo real.
+ * Envia el enlace de recuperacion. Las variables que recibe la plantilla de EmailJS son:
+ *   {{to_email}}, {{enlace}} y {{minutos_vigencia}}
+ * Sin credenciales y fuera de produccion, imprime el enlace en consola para poder probar el flujo.
  */
 async function enviarRecuperacion(destino, enlace) {
-  const t = obtenerTransporte();
-  if (!t) {
-    if (process.env.NODE_ENV === 'production') throw new Error('Gmail no configurado');
+  const {
+    EMAILJS_SERVICE_ID: serviceId,
+    EMAILJS_TEMPLATE_ID: templateId,
+    EMAILJS_PUBLIC_KEY: publicKey,
+    EMAILJS_PRIVATE_KEY: privateKey,
+  } = process.env;
+
+  if (!serviceId || !templateId || !publicKey || !privateKey) {
+    if (process.env.NODE_ENV === 'production') throw new Error('EmailJS no está configurado');
     console.log(`[correo:simulado] Enlace de recuperación para ${destino}: ${enlace}`);
     return;
   }
-  await t.sendMail({
-    from: `"Tamalon" <${process.env.GMAIL_USER}>`,
-    to: destino,
-    subject: 'Restablece tu contraseña de Tamalon',
-    text:
-      `Recibimos una solicitud para restablecer tu contraseña.\n\n` +
-      `Abre este enlace (válido 30 minutos y de un solo uso):\n${enlace}\n\n` +
-      `Si no fuiste tú, ignora este mensaje.`,
-    html:
-      `<p>Recibimos una solicitud para restablecer tu contraseña.</p>` +
-      `<p><a href="${enlace}">Restablecer contraseña</a></p>` +
-      `<p>El enlace es válido 30 minutos y de un solo uso. Si no fuiste tú, ignora este mensaje.</p>`,
+
+  const resp = await fetch(ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    signal: AbortSignal.timeout(15000),
+    body: JSON.stringify({
+      service_id: serviceId,
+      template_id: templateId,
+      user_id: publicKey,        // Public Key
+      accessToken: privateKey,   // Private Key (solo servidor)
+      template_params: { to_email: destino, enlace, minutos_vigencia: 30 },
+    }),
   });
+
+  if (!resp.ok) {
+    // EmailJS explica el motivo en el cuerpo (p. ej. "API calls are disabled for non-browser applications")
+    throw new Error(`EmailJS respondió ${resp.status}: ${await resp.text()}`);
+  }
 }
 
 module.exports = { enviarRecuperacion };

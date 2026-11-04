@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- El enlace lleva un token secreto: evita que se filtre a otros sitios por el encabezado Referer -->
+    <meta name="referrer" content="no-referrer">
+    <title>Nueva contraseña | Tamalon</title>
+    <style>
+        :root {
+            --fondo: #f4f5f7; --tarjeta: #ffffff; --tinta: #26221f; --tenue: #5f5a55;
+            --borde: #d6d3cf; --acento: #d35400; --acento-hover: #b84700;
+            --ok: #1e7e4f; --error: #b03a2e;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            padding: 20px; background: var(--fondo); color: var(--tinta);
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.5;
+        }
+        main { width: 100%; max-width: 400px; background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 10px; padding: 32px 28px; }
+        .marca { font-weight: 800; color: var(--acento); font-size: 1.1rem; margin: 0 0 20px; }
+        h1 { font-size: 1.5rem; line-height: 1.2; margin: 0 0 8px; }
+        p.ayuda { color: var(--tenue); margin: 0 0 22px; }
+        label { display: block; font-weight: 600; margin-bottom: 6px; }
+        .campo + .campo { margin-top: 14px; }
+        input {
+            width: 100%; padding: 11px 12px; font: inherit; color: inherit;
+            border: 1px solid var(--borde); border-radius: 6px; background: #fff;
+        }
+        input:focus-visible, button:focus-visible, a:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
+        button {
+            width: 100%; margin-top: 18px; padding: 12px; font: inherit; font-weight: 700; cursor: pointer;
+            color: #fff; background: var(--acento); border: 0; border-radius: 6px;
+        }
+        button:hover { background: var(--acento-hover); }
+        button:disabled { opacity: .6; cursor: wait; }
+        .estado { margin: 16px 0 0; min-height: 1.5em; white-space: pre-line; font-weight: 600; }
+        .estado.ok { color: var(--ok); }
+        .estado.error { color: var(--error); }
+        .pie { margin: 22px 0 0; font-size: .95rem; }
+        a { color: var(--acento); }
+        [hidden] { display: none !important; }
+    </style>
+</head>
+<body>
+    <main>
+        <p class="marca">Tamalon</p>
+        <h1>Crea tu nueva contraseña</h1>
+        <p class="ayuda">Usa de 8 a 64 caracteres, con al menos una letra y un número. Debe ser distinta a la actual.</p>
+
+        <form id="form" novalidate>
+            <div class="campo">
+                <label for="contrasena">Nueva contraseña</label>
+                <input id="contrasena" type="password" maxlength="64" autocomplete="new-password" required>
+            </div>
+            <div class="campo">
+                <label for="confirmar">Confirmar contraseña</label>
+                <input id="confirmar" type="password" maxlength="64" autocomplete="new-password" required>
+            </div>
+            <button id="boton" type="submit">Guardar contraseña</button>
+        </form>
+
+        <p id="estado" class="estado" role="status" aria-live="polite"></p>
+        <p id="enlace-nuevo" class="pie" hidden><a href="recuperar.html">Solicitar un enlace nuevo</a></p>
+        <p id="ir-inicio" class="pie" hidden><a href="../index.html">Ir al inicio</a></p>
+    </main>
+
+    <script>
+        // En local apunta al backend en :3000; en produccion cambia la URL por la de tu servicio en Render
+        const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+            ? 'http://localhost:3000'
+            : 'https://TU-BACKEND.onrender.com';
+
+        const token = new URLSearchParams(location.search).get('token');
+        const form = document.getElementById('form');
+        const boton = document.getElementById('boton');
+        const estado = document.getElementById('estado');
+        const enlaceNuevo = document.getElementById('enlace-nuevo');
+        const irInicio = document.getElementById('ir-inicio');
+        const campoContrasena = document.getElementById('contrasena');
+        const campoConfirmar = document.getElementById('confirmar');
+
+        function mostrar(texto, tipo) {
+            estado.textContent = texto;
+            estado.className = `estado ${tipo}`;
+        }
+
+        async function enviarCambio(contrasena, confirmacion) {
+            let resp;
+            try {
+                resp = await fetch(`${API_BASE}/api/auth/restablecer`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token, contrasena, confirmar_contrasena: confirmacion })
+                });
+            } catch (_) {
+                return { ok: false, texto: 'Sin conexión a internet. Verifica tu conexión e intenta de nuevo' };
+            }
+            let data = null;
+            try { data = await resp.json(); } catch (_) { /* sin cuerpo JSON */ }
+
+            if (resp.ok) return { ok: true, texto: data.mensaje };
+            // Datos invalidos: el servidor manda "errores" (uno por campo). Sin "errores" en un 400 el enlace ya no sirve.
+            const hayErroresDeCampo = !!(data && Array.isArray(data.errores) && data.errores.length);
+            return {
+                ok: false,
+                enlaceInvalido: resp.status === 400 && !hayErroresDeCampo,
+                texto: hayErroresDeCampo
+                    ? data.errores.join('\n')
+                    : (data && data.mensaje) || 'Ocurrió un error inesperado. Intenta de nuevo en unos minutos'
+            };
+        }
+
+        // Sin token en la direccion no hay nada que restablecer
+        if (!token) {
+            form.hidden = true;
+            document.querySelector('.ayuda').hidden = true;
+            mostrar('Este enlace está incompleto. Solicita uno nuevo para restablecer tu contraseña.', 'error');
+            enlaceNuevo.hidden = false;
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            boton.disabled = true;
+            mostrar('Guardando…', 'ok');
+
+            const r = await enviarCambio(campoContrasena.value, campoConfirmar.value);
+            boton.disabled = false;
+
+            if (r.ok) {
+                form.hidden = true;
+                document.querySelector('.ayuda').hidden = true;
+                mostrar(r.texto, 'ok');
+                irInicio.hidden = false;
+                return;
+            }
+
+            // Las contrasenas no se conservan tras un error
+            campoContrasena.value = '';
+            campoConfirmar.value = '';
+            campoContrasena.focus();
+            mostrar(r.texto, 'error');
+            if (r.enlaceInvalido) {
+                form.hidden = true;
+                document.querySelector('.ayuda').hidden = true;
+                enlaceNuevo.hidden = false;
+            }
+        });
+    </script>
+</body>
+</html>
