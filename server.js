@@ -40,8 +40,6 @@ app.use('/api/catalogos', catalogosRoutes);
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api', noEncontrado);
 
-// ---------------------------------------------------------------- Frontend estatico
-// Solo se publica lo que el navegador necesita. NO se sirve js/ completo: ahi viven los controladores.
 app.use('/css', express.static(path.join(__dirname, 'css')));
 app.use('/html', express.static(path.join(__dirname, 'html')));
 app.get('/js/script.js', (req, res) => res.sendFile(path.join(__dirname, 'js', 'script.js')));

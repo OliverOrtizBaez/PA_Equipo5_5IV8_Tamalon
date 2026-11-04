@@ -4,7 +4,8 @@ const ENDPOINT = 'https://api.emailjs.com/api/v1.0/email/send';
 
 /**
  * Envia el enlace de recuperacion. Las variables que recibe la plantilla de EmailJS son:
- *   {{to_email}}, {{enlace}} y {{minutos_vigencia}}
+ *   {{to_email}}, {{link}} y {{minutos_vigencia}}.
+ * Se conserva {{enlace}} como alias para plantillas anteriores.
  * Sin credenciales y fuera de produccion, imprime el enlace en consola para poder probar el flujo.
  */
 async function enviarRecuperacion(destino, enlace) {
@@ -30,7 +31,7 @@ async function enviarRecuperacion(destino, enlace) {
       template_id: templateId,
       user_id: publicKey,        // Public Key
       accessToken: privateKey,   // Private Key (solo servidor)
-      template_params: { to_email: destino, enlace, minutos_vigencia: 30 },
+      template_params: { to_email: destino, link: enlace, enlace, minutos_vigencia: 30 },
     }),
   });
 
