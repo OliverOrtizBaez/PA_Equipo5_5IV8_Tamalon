@@ -1,5 +1,21 @@
 // Pool de conexiones MySQL. Todo el sistema trabaja en UTC (ISO 8601 UTC, ver glosario).
+const fs = require('fs');
+const path = require('path');
 const mysql = require('mysql2/promise');
+
+// SSL: verifica el certificado del servidor usando el CA de Aiven.
+// Orden: variable DB_SSL_CA (contenido del certificado) o archivo certs/aiven-ca.pem
+function configSSL() {
+  if (process.env.DB_SSL !== 'true') return undefined;
+  let ca;
+  if (process.env.DB_SSL_CA) {
+    ca = process.env.DB_SSL_CA.replace(/\\n/g, '\n');
+  } else {
+    const ruta = path.join(__dirname, '..', '..', 'certs', 'aiven-ca.pem');
+    if (fs.existsSync(ruta)) ca = fs.readFileSync(ruta);
+  }
+  return { rejectUnauthorized: true, ca };
+}
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
@@ -11,7 +27,7 @@ const pool = mysql.createPool({
   connectionLimit: 10,
   charset: 'utf8mb4',
   timezone: 'Z', // los Date de JS se envian y reciben como UTC
-  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: true } : undefined,
+  ssl: configSSL(),
 });
 
 // Cada conexion nueva opera en UTC (NOW(), CURRENT_TIMESTAMP, columnas TIMESTAMP)

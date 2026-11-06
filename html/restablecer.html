@@ -8,19 +8,19 @@
     <title>Nueva contraseña | Tamalon</title>
     <style>
         :root {
-            --fondo: #f4f5f7; --tarjeta: #ffffff; --tinta: #26221f; --tenue: #5f5a55;
-            --borde: #d6d3cf; --acento: #d35400; --acento-hover: #b84700;
-            --ok: #1e7e4f; --error: #b03a2e;
+            --fondo: #FBF7F0; --tarjeta: #fff; --tinta: #3D2B1F; --tenue: #6B4E35;
+            --borde: #E6D5BE; --acento: #3D2B1F; --acento-hover: #6B4E35;
+            --ok: #246342; --error: #9D3027; --foco: #C7B299;
         }
         * { box-sizing: border-box; }
         body {
             margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
             padding: 20px; background: var(--fondo); color: var(--tinta);
-            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.5;
+            font-family: 'Roboto', system-ui, -apple-system, "Segoe UI", sans-serif; line-height: 1.5;
         }
         main { width: 100%; max-width: 400px; background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 10px; padding: 32px 28px; }
-        .marca { font-weight: 800; color: var(--acento); font-size: 1.1rem; margin: 0 0 20px; }
-        h1 { font-size: 1.5rem; line-height: 1.2; margin: 0 0 8px; }
+        .marca { font-weight: 800; color: var(--tinta); font-size: 1.1rem; margin: 0 0 20px; }
+        h1 { font-size: 1.5rem; line-height: 1.2; margin: 0 0 8px; color: var(--tinta); }
         p.ayuda { color: var(--tenue); margin: 0 0 22px; }
         label { display: block; font-weight: 600; margin-bottom: 6px; }
         .campo + .campo { margin-top: 14px; }
@@ -28,10 +28,10 @@
             width: 100%; padding: 11px 12px; font: inherit; color: inherit;
             border: 1px solid var(--borde); border-radius: 6px; background: #fff;
         }
-        input:focus-visible, button:focus-visible, a:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
+        input:focus-visible, button:focus-visible, a:focus-visible { outline: 3px solid var(--foco); outline-offset: 2px; }
         button {
             width: 100%; margin-top: 18px; padding: 12px; font: inherit; font-weight: 700; cursor: pointer;
-            color: #fff; background: var(--acento); border: 0; border-radius: 6px;
+            color: var(--fondo); background: var(--acento); border: 0; border-radius: 6px;
         }
         button:hover { background: var(--acento-hover); }
         button:disabled { opacity: .6; cursor: wait; }
@@ -39,7 +39,7 @@
         .estado.ok { color: var(--ok); }
         .estado.error { color: var(--error); }
         .pie { margin: 22px 0 0; font-size: .95rem; }
-        a { color: var(--acento); }
+        a { color: var(--tenue); text-decoration: underline; text-underline-offset: 2px; }
         [hidden] { display: none !important; }
     </style>
 </head>
