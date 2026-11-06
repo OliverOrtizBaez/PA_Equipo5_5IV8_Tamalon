@@ -459,17 +459,18 @@
                     <form id="contact-form" onsubmit="submitForm(event)">
                         <div class="field">
                             <label for="nombre">Nombre</label>
-                            <input type="text" id="nombre" name="nombre" placeholder="Tu nombre completo" required />
+                            <input type="text" id="nombre" name="nombre" placeholder="Tu nombre completo" minlength="2" maxlength="100" autocomplete="name" required />
                         </div>
                         <div class="field">
                             <label for="correo">Correo electrónico</label>
-                            <input type="email" id="correo" name="correo" placeholder="tu@correo.com" required />
+                            <input type="email" id="correo" name="correo" placeholder="tu@correo.com" maxlength="100" autocomplete="email" required />
                         </div>
                         <div class="field">
                             <label for="mensaje">Mensaje</label>
-                            <textarea id="mensaje" name="mensaje" rows="4" placeholder="¿Quieres unirte al proyecto, reportar un vendedor o simplemente decir hola?" required></textarea>
+                            <textarea id="mensaje" name="mensaje" rows="4" minlength="5" maxlength="1000" placeholder="¿Quieres unirte al proyecto, reportar un vendedor o simplemente decir hola?" required></textarea>
                         </div>
                         <button type="submit" class="btn-submit">Enviar mensaje</button>
+                        <p id="contact-error" class="contact-error" role="alert" aria-live="polite" hidden></p>
                     </form>
                     <div class="success-msg" id="success-msg">
                         <div class="success-icon">

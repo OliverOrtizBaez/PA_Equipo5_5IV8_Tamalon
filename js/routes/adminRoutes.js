@@ -17,5 +17,6 @@ router.put('/usuarios/:id/suspender', admin.suspenderIndefinidamente);    // RF2
 router.put('/usuarios/:id/suspender-temporal', admin.suspenderTemporalmente); // RF22.2a
 router.put('/usuarios/:id/reactivar', admin.reactivarCuenta);             // RF22.3
 router.get('/reportes', admin.consultarReportes);                         // RF24
+router.get('/contactos', admin.consultarMensajesContacto);
 
 module.exports = router;

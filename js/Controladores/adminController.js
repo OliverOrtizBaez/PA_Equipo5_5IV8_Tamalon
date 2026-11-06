@@ -306,8 +306,24 @@ const consultarReportes = asyncHandler(async (req, res) => {
   });
 });
 
+const consultarMensajesContacto = asyncHandler(async (req, res) => {
+  const pagina = parsePagina(req.query.pagina);
+  const [[{ total }]] = await pool.query('SELECT COUNT(*) AS total FROM mensaje_contacto');
+  const [mensajes] = await pool.query(
+    `SELECT id_mensaje, nombre, correo, mensaje, fecha_creacion
+       FROM mensaje_contacto
+      ORDER BY fecha_creacion DESC, id_mensaje DESC
+      LIMIT ? OFFSET ?`,
+    [C.POR_PAGINA, (pagina - 1) * C.POR_PAGINA]
+  );
+  res.json({
+    mensajes, pagina, total,
+    totalPaginas: Math.ceil(total / C.POR_PAGINA),
+  });
+});
+
 module.exports = {
   crearAdministrador, consultarSuscripciones, consultarTrafico, consultarIngresos, exportarIngresos,
   buscarUsuarios, cambiarRol, suspenderIndefinidamente, suspenderTemporalmente, reactivarCuenta,
-  consultarReportes,
+  consultarReportes, consultarMensajesContacto,
 };

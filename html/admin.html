@@ -156,6 +156,7 @@
             <button class="nav-btn" onclick="cambiarSeccion('ingresos', this)">💰 Ingresos</button>
             <button class="nav-btn" onclick="cambiarSeccion('usuarios', this)">👥 Usuarios</button>
             <button class="nav-btn" onclick="cambiarSeccion('reportes', this); cargarReportes();">⚠️ Reportes</button>
+            <button class="nav-btn" onclick="cambiarSeccion('contactos', this); cargarMensajesContacto();">✉️ Mensajes de contacto</button>
             <button class="nav-btn" onclick="cambiarSeccion('nuevo-admin', this)">🛡️ Nuevo Administrador</button>
             <button class="nav-btn" style="margin-top: auto; background: var(--danger);" onclick="cerrarSesion()">Cerrar Sesión</button>
         </nav>
@@ -264,6 +265,24 @@
                 </tbody>
             </table>
             <div id="paginacion-reportes" class="paginacion"></div>
+        </section>
+
+        <section id="contactos" class="seccion">
+            <h1>Mensajes de la landing</h1>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Fecha y Hora</th>
+                        <th>Nombre</th>
+                        <th>Correo</th>
+                        <th>Mensaje</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-contactos">
+                    <tr><td colspan="4" style="text-align:center;">Cargando mensajes...</td></tr>
+                </tbody>
+            </table>
+            <div id="paginacion-contactos" class="paginacion"></div>
         </section>
 
         <section id="nuevo-admin" class="seccion">
@@ -567,6 +586,33 @@
                     tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">${esc(data.mensaje || 'No hay reportes registrados')}</td></tr>`;
                 }
                 dibujarPaginacion('paginacion-reportes', data.pagina, data.totalPaginas, 'cargarReportes');
+            } catch (error) { avisar(error); }
+        }
+
+        async function cargarMensajesContacto(pagina = 1) {
+            try {
+                const data = await api(`/contactos?pagina=${pagina}`);
+                const tbody = document.getElementById('tbody-contactos');
+
+                if (data.mensajes.length > 0) {
+                    tbody.innerHTML = data.mensajes.map((mensaje) => {
+                        const largo = mensaje.mensaje.length > 100;
+                        const corto = largo ? mensaje.mensaje.substring(0, 100) : mensaje.mensaje;
+                        return `
+                            <tr>
+                                <td>${esc(fechaHora(mensaje.fecha_creacion, false))}</td>
+                                <td>${esc(mensaje.nombre)}</td>
+                                <td>${esc(mensaje.correo)}</td>
+                                <td>
+                                    <span data-completo="${esc(mensaje.mensaje)}" data-corto="${esc(corto)}">${esc(corto)}</span>
+                                    ${largo ? '<a href="#" onclick="alternarMotivo(this); return false;">… Ver más</a>' : ''}
+                                </td>
+                            </tr>`;
+                    }).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No hay mensajes de contacto.</td></tr>';
+                }
+                dibujarPaginacion('paginacion-contactos', data.pagina, data.totalPaginas, 'cargarMensajesContacto');
             } catch (error) { avisar(error); }
         }
 

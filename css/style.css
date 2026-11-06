@@ -923,6 +923,11 @@ textarea {
     margin-top: .35rem;
 }
 
+.contact-error {
+    margin-top: .75rem;
+    color: #9D3027;
+}
+
 .contact-side {
     display: flex;
     flex-direction: column;
