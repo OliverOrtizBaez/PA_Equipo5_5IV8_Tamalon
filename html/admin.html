@@ -293,10 +293,7 @@
     </main>
 
     <script>
-        // En local apunta al backend en :3000; en produccion cambia la URL por la de tu servicio en Render
-        const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
-            ? 'http://localhost:3000'
-            : 'https://TU-BACKEND.onrender.com';
+        const API_BASE = location.origin;
         const API_URL = `${API_BASE}/api/admin`;
         const LOGIN_URL = 'login.html'; // pendiente: pantalla de login del panel web (RF2.1)
 

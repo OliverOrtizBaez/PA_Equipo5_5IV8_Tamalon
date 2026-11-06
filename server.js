@@ -50,6 +50,6 @@ app.use(manejadorErrores);
 
 const PORT = Number(process.env.PORT || 3000);
 app.listen(PORT, () => {
-  console.log(`Tamalon escuchando en http://localhost:${PORT}`);
+  console.log(`Tamalon escuchando en el puerto ${PORT}`);
   iniciarJobs();
 });
