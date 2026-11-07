@@ -196,6 +196,7 @@ CREATE TABLE `ubi_vendedor` (
   PRIMARY KEY (`id_ubicacion`),
   UNIQUE KEY `id_vendedor` (`id_vendedor`),
   KEY `idx_ubi_disponibilidad` (`disponibilidad`, `ultima_actualizacion`),
+  KEY `idx_ubi_cercanos` (`disponibilidad`, `ultima_actualizacion`, `latitud`, `longitud`),
   CONSTRAINT `fk_ubicacion_vendedor` FOREIGN KEY (`id_vendedor`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE,
   CONSTRAINT `chk_ubi_disponibilidad` CHECK (`disponibilidad` IN ('En ruta','Fuera de ruta'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

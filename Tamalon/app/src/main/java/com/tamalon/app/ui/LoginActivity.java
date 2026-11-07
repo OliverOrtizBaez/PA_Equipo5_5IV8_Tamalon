@@ -11,11 +11,6 @@ import com.tamalon.app.R;
 import com.tamalon.app.model.Usuario;
 import com.tamalon.app.service.AutenticacionService;
 
-/**
- * Pantalla de inicio de sesión.
- * No inicia sesión automáticamente con ningún usuario predeterminado.
- * Si ya hay una sesión activa, MainActivity redirige aquí o al mapa directamente.
- */
 public class LoginActivity extends AppCompatActivity {
 
     private EditText etCorreo, etPassword;
@@ -56,11 +51,11 @@ public class LoginActivity extends AppCompatActivity {
                     abrirMapa(usuario);
                 });
             }
-            @Override public void onError(String mensajeResId) {
+            @Override public void onError(String mensaje) {
                 runOnUiThread(() -> {
                     mostrarCargando(false);
-                    mostrarError(getString(getResources().getIdentifier(
-                            mensajeResId, "string", getPackageName())));
+                    int resId = getResources().getIdentifier(mensaje, "string", getPackageName());
+                    mostrarError(resId != 0 ? getString(resId) : mensaje);
                 });
             }
         });

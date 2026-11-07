@@ -1,24 +1,29 @@
 package com.tamalon.app.ui;
 
-import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.View;
 import android.widget.*;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import com.tamalon.app.BuildConfig;
 import com.tamalon.app.R;
-import com.tamalon.app.repository.ReporteRepository;
+import com.tamalon.app.network.*;
 import com.tamalon.app.service.AutenticacionService;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 /**
- * RF23.1 — Vendedor reporta a Cliente.
- * RF23.2 — Cliente reporta a Vendedor.
- * Disponible para cuentas Gratuitas y Premium; no es función exclusiva Premium.
+ * Pantalla de reporte conectada a `POST /api/soporte/reportes`.
  */
 public class ReporteActivity extends AppCompatActivity {
 
+    private static final String TAG = "ReporteActivity";
     private static final int MOTIVO_MAX = 500;
+    private static boolean loggedReporte = false;
 
     private TextView tvReportadoNombre, tvContador;
     private EditText etMotivo;
@@ -27,10 +32,8 @@ public class ReporteActivity extends AppCompatActivity {
 
     private int reportadoId;
     private String reportadoRol;
-    private int emisorId;
-    private String emisorRol;
 
-    private ReporteRepository reporteRepo;
+    private ApiService apiService;
     private AutenticacionService authService;
 
     @Override
@@ -38,12 +41,11 @@ public class ReporteActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_report);
 
-        reporteRepo  = new ReporteRepository(this);
+        apiService   = ApiClient.getApiService(this);
         authService  = new AutenticacionService(this);
 
-        // Los IDs vienen de la Activity anterior (nunca los escribe el usuario)
         reportadoId  = getIntent().getIntExtra("reportado_id", -1);
-        reportadoRol = getIntent().getStringExtra("reportado_rol");   // "cliente" | "vendedor"
+        reportadoRol = getIntent().getStringExtra("reportado_rol");
 
         tvReportadoNombre = findViewById(R.id.report_target_name);
         tvContador        = findViewById(R.id.report_char_counter);
@@ -52,14 +54,10 @@ public class ReporteActivity extends AppCompatActivity {
         btnEnviar         = findViewById(R.id.report_submit);
         btnCancelar       = findViewById(R.id.report_cancel);
 
-        String label = "vendedor".equals(reportadoRol)
+        String label = "vendedor".equalsIgnoreCase(reportadoRol)
                 ? getString(R.string.badge_vendor)
                 : getString(R.string.badge_client);
-        tvReportadoNombre.setText(label + " — cargando cuenta…");
-        if (reportadoId > 0) new Thread(() -> {
-            com.tamalon.app.model.Usuario reportado = com.tamalon.app.data.local.AppDatabase.getInstance(this).usuarioDao().obtenerPorId(reportadoId);
-            runOnUiThread(() -> tvReportadoNombre.setText(label + " — " + (reportado == null ? "Cuenta no encontrada" : reportado.nombreCompleto)));
-        }).start();
+        tvReportadoNombre.setText(label + " — Cuenta #" + reportadoId);
 
         etMotivo.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int st, int c, int a) {}
@@ -77,11 +75,9 @@ public class ReporteActivity extends AppCompatActivity {
 
         authService.obtenerUsuarioActivo(new AutenticacionService.Callback<com.tamalon.app.model.Usuario>() {
             @Override public void onExito(com.tamalon.app.model.Usuario usuario) {
-                emisorId  = usuario.id;
-                emisorRol = usuario.rol;
             }
             @Override public void onError(String mensajeResId) {
-                finish(); // Sin sesión activa, no se puede reportar
+                finish();
             }
         });
     }
@@ -91,22 +87,32 @@ public class ReporteActivity extends AppCompatActivity {
         mostrarEstado(getString(R.string.report_sending), false);
         btnEnviar.setEnabled(false);
 
-        reporteRepo.enviarReporte(emisorId, emisorRol, reportadoId, reportadoRol, motivo,
-                new ReporteRepository.Callback() {
-                    @Override public void onExito() {
-                        runOnUiThread(() -> {
-                            mostrarEstado(getString(R.string.report_success), true);
-                            etMotivo.setEnabled(false);
-                            btnCancelar.setText(R.string.btn_back);
-                        });
+        CrearReporteRequest req = new CrearReporteRequest(reportadoId, reportadoRol, motivo);
+        apiService.enviarReporte(req).enqueue(new Callback<ReporteResponse>() {
+            @Override
+            public void onResponse(@NonNull Call<ReporteResponse> call, @NonNull Response<ReporteResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    if (BuildConfig.DEBUG && !loggedReporte) {
+                        loggedReporte = true;
+                        Log.d(TAG, "POST /api/soporte/reportes HTTP " + response.code() + " msg=" + response.body().mensaje);
                     }
-                    @Override public void onError(String mensajeResId) {
-                        runOnUiThread(() -> {
-                            mostrarEstado(resolverString(mensajeResId), false);
-                            btnEnviar.setEnabled(true);
-                        });
-                    }
-                });
+                    mostrarEstado(getString(R.string.report_success), true);
+                    etMotivo.setEnabled(false);
+                    btnCancelar.setText(R.string.btn_back);
+                } else {
+                    String err = ApiErrorHelper.parseError(ReporteActivity.this, null, response);
+                    mostrarEstado(err, false);
+                    btnEnviar.setEnabled(true);
+                }
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<ReporteResponse> call, @NonNull Throwable t) {
+                String err = ApiErrorHelper.parseError(ReporteActivity.this, t, null);
+                mostrarEstado(err, false);
+                btnEnviar.setEnabled(true);
+            }
+        });
     }
 
     private void mostrarEstado(String mensaje, boolean exito) {
@@ -115,10 +121,5 @@ public class ReporteActivity extends AppCompatActivity {
         tvEstado.setTextColor(exito
                 ? getColor(R.color.tamalon_green)
                 : getColor(R.color.tamalon_red));
-    }
-
-    private String resolverString(String resIdNombre) {
-        int id = getResources().getIdentifier(resIdNombre, "string", getPackageName());
-        return id != 0 ? getString(id) : resIdNombre;
     }
 }

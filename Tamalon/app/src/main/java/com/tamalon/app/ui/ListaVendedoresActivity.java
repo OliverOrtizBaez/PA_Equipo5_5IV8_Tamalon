@@ -9,6 +9,7 @@ import android.graphics.drawable.RippleDrawable;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
@@ -20,26 +21,35 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.tamalon.app.BuildConfig;
 import com.tamalon.app.R;
 import com.tamalon.app.data.local.AppDatabase;
 import com.tamalon.app.model.Favorito;
-import com.tamalon.app.model.Usuario;
+import com.tamalon.app.network.*;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
 /**
- * Pantalla de búsqueda de vendedores y antojitos de la zona con filtros interactivos
- * y tarjeta de descripción del puesto seleccionado.
+ * Pantalla de búsqueda de vendedores y antojitos de la zona conectada a la API.
  */
 public class ListaVendedoresActivity extends AppCompatActivity {
 
+    private static final String TAG = "ListaVendedoresActivity";
+    private static boolean loggedVendedores = false;
+
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private AppDatabase db;
+    private ApiService apiService;
     private int usuarioId = -1;
     private String rol = "cliente";
     private String plan = "gratuito";
@@ -56,7 +66,6 @@ public class ListaVendedoresActivity extends AppCompatActivity {
     private TextView tvCountBadge;
     private LinearLayout categoryFiltersContainer;
 
-    // Tarjeta de descripción del puesto seleccionado
     private LinearLayout selectedCard;
     private TextView tvSelectedName;
     private TextView tvSelectedStatus;
@@ -64,9 +73,9 @@ public class ListaVendedoresActivity extends AppCompatActivity {
     private Button btnSelectedCatalog;
     private Button btnSelectedFavorite;
     private ImageButton btnSelectedClose;
-    private Usuario vendedorSeleccionadoActual;
+    private VendedorListaDto vendedorSeleccionadoActual;
 
-    private final List<Usuario> listaVendedores = new ArrayList<>();
+    private final List<VendedorListaDto> listaVendedores = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle state) {
@@ -78,6 +87,7 @@ public class ListaVendedoresActivity extends AppCompatActivity {
         if (getIntent().getStringExtra("plan") != null) plan = getIntent().getStringExtra("plan");
 
         db = AppDatabase.getInstance(this);
+        apiService = ApiClient.getApiService(this);
 
         scrollView = findViewById(R.id.list_scroll_view);
         resultsContainer = findViewById(R.id.list_results);
@@ -85,14 +95,12 @@ public class ListaVendedoresActivity extends AppCompatActivity {
         tvCountBadge = findViewById(R.id.list_count_badge);
         categoryFiltersContainer = findViewById(R.id.list_category_filters);
 
-        // Notificaciones
         View btnNotificaciones = findViewById(R.id.list_btn_notifications);
         if (btnNotificaciones != null) {
             btnNotificaciones.setOnClickListener(v ->
                     Toast.makeText(this, "Notificaciones: Tienes alertas de puestos en ruta en tu zona", Toast.LENGTH_LONG).show());
         }
 
-        // Configurar tarjeta de descripción seleccionada
         selectedCard = findViewById(R.id.list_selected_card);
         tvSelectedName = findViewById(R.id.list_selected_name);
         tvSelectedStatus = findViewById(R.id.list_selected_status);
@@ -112,7 +120,7 @@ public class ListaVendedoresActivity extends AppCompatActivity {
             btnSelectedCatalog.setOnClickListener(v -> {
                 if (vendedorSeleccionadoActual != null) {
                     Intent i = new Intent(this, CatalogoPublicoActivity.class);
-                    i.putExtra("vendedor_id", vendedorSeleccionadoActual.id);
+                    i.putExtra("vendedor_id", vendedorSeleccionadoActual.idUsuario);
                     startActivity(i);
                 }
             });
@@ -126,34 +134,44 @@ public class ListaVendedoresActivity extends AppCompatActivity {
             });
         }
 
-        // Barra inferior
         BottomNavigation.configurar(this, findViewById(android.R.id.content), usuarioId, rol, plan);
 
-        // Buscador
         EditText search = findViewById(R.id.list_search);
         search.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
                 filtroTexto = s.toString().trim().toLowerCase();
-                render();
+                cargarVendedoresDeApi();
             }
             @Override public void afterTextChanged(Editable e) {}
         });
 
-        // Construir chips de categorías
         construirChipsCategorias();
+        cargarVendedoresDeApi();
+    }
 
-        // Cargar datos locales de Room
-        db.usuarioDao().obtenerTodos().observe(this, users -> {
-            listaVendedores.clear();
-            if (users != null) {
-                for (Usuario u : users) {
-                    if (u.esVendedor()) {
-                        listaVendedores.add(u);
+    private void cargarVendedoresDeApi() {
+        String buscarParam = filtroTexto.isEmpty() ? null : filtroTexto;
+        apiService.obtenerVendedores(buscarParam, 1, 50).enqueue(new Callback<VendedoresListaResponse>() {
+            @Override
+            public void onResponse(@NonNull Call<VendedoresListaResponse> call, @NonNull Response<VendedoresListaResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    if (BuildConfig.DEBUG && !loggedVendedores) {
+                        loggedVendedores = true;
+                        Log.d(TAG, "GET /api/usuarios/vendedores HTTP " + response.code() + " total=" + (response.body().vendedores != null ? response.body().vendedores.size() : 0));
                     }
+                    listaVendedores.clear();
+                    if (response.body().vendedores != null) {
+                        listaVendedores.addAll(response.body().vendedores);
+                    }
+                    render();
                 }
             }
-            render();
+
+            @Override
+            public void onFailure(@NonNull Call<VendedoresListaResponse> call, @NonNull Throwable t) {
+                Log.e(TAG, "Error cargando lista de vendedores", t);
+            }
         });
     }
 
@@ -213,16 +231,10 @@ public class ListaVendedoresActivity extends AppCompatActivity {
         resultsContainer.removeAllViews();
         int count = 0;
 
-        for (Usuario u : listaVendedores) {
-            String nombre = u.nombreCompleto == null ? "" : u.nombreCompleto.toLowerCase();
-            if (!filtroTexto.isEmpty() && !nombre.contains(filtroTexto)) {
-                continue;
-            }
-
+        for (VendedorListaDto u : listaVendedores) {
             count++;
-            final Usuario vendedorItem = u;
+            final VendedorListaDto vendedorItem = u;
 
-            // Tarjeta de puesto
             LinearLayout card = new LinearLayout(this);
             card.setOrientation(LinearLayout.HORIZONTAL);
             card.setGravity(Gravity.CENTER_VERTICAL);
@@ -239,7 +251,6 @@ public class ListaVendedoresActivity extends AppCompatActivity {
             lp.bottomMargin = dp(10);
             card.setLayoutParams(lp);
 
-            // Icono / avatar
             ImageView ivAvatar = new ImageView(this);
             ivAvatar.setImageResource(R.drawable.ic_user);
             ivAvatar.setBackgroundResource(R.drawable.bg_circle);
@@ -248,7 +259,6 @@ public class ListaVendedoresActivity extends AppCompatActivity {
             avatarLp.setMarginEnd(dp(12));
             card.addView(ivAvatar, avatarLp);
 
-            // Textos info
             LinearLayout info = new LinearLayout(this);
             info.setOrientation(LinearLayout.VERTICAL);
 
@@ -260,7 +270,7 @@ public class ListaVendedoresActivity extends AppCompatActivity {
             info.addView(tvName);
 
             TextView tvSub = new TextView(this);
-            tvSub.setText("Especialidad en antojitos · En ruta activa");
+            tvSub.setText(u.enRuta ? "Especialidad en antojitos · En ruta activa" : "Especialidad en antojitos · Fuera de ruta");
             tvSub.setTextColor(getColor(R.color.tamalon_muted));
             tvSub.setTextSize(10f);
             tvSub.setPadding(0, dp(2), 0, 0);
@@ -268,7 +278,6 @@ public class ListaVendedoresActivity extends AppCompatActivity {
 
             card.addView(info, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
 
-            // Botón rápido de seleccionar/ver descripción
             Button btnVer = new Button(this);
             btnVer.setText("Detalle");
             btnVer.setAllCaps(false);
@@ -279,9 +288,7 @@ public class ListaVendedoresActivity extends AppCompatActivity {
             btnVer.setOnClickListener(v -> seleccionarVendedor(vendedorItem));
             card.addView(btnVer);
 
-            // Al tocar la tarjeta completa, también se selecciona y muestra la descripción
             card.setOnClickListener(v -> seleccionarVendedor(vendedorItem));
-
             resultsContainer.addView(card);
         }
 
@@ -293,7 +300,7 @@ public class ListaVendedoresActivity extends AppCompatActivity {
         resultsContainer.setVisibility(count == 0 ? View.GONE : View.VISIBLE);
     }
 
-    private void seleccionarVendedor(Usuario vendedor) {
+    private void seleccionarVendedor(VendedorListaDto vendedor) {
         vendedorSeleccionadoActual = vendedor;
         if (selectedCard == null) return;
 
@@ -301,7 +308,7 @@ public class ListaVendedoresActivity extends AppCompatActivity {
             tvSelectedName.setText(vendedor.nombreCompleto == null ? "Puesto de Antojitos" : vendedor.nombreCompleto);
         }
         if (tvSelectedStatus != null) {
-            tvSelectedStatus.setText("● En ruta activa · Radio 3 km");
+            tvSelectedStatus.setText(vendedor.enRuta ? "● En ruta activa" : "○ Fuera de ruta");
         }
         if (tvSelectedDesc != null) {
             tvSelectedDesc.setText("Puesto seleccionado: Venta de antojitos tradicionales preparados al día. Consulta el catálogo para ver productos disponibles.");
@@ -309,18 +316,17 @@ public class ListaVendedoresActivity extends AppCompatActivity {
 
         selectedCard.setVisibility(View.VISIBLE);
 
-        // Desplazar suavemente para que la descripción quede a la vista
         if (scrollView != null) {
             scrollView.smoothScrollTo(0, selectedCard.getTop());
         }
     }
 
-    private void guardarFavorito(Usuario vendedor) {
+    private void guardarFavorito(VendedorListaDto vendedor) {
         if (usuarioId < 1) {
             Toast.makeText(this, "No se pudo identificar tu cuenta", Toast.LENGTH_SHORT).show();
             return;
         }
-        if (!"premium".equals(plan)) {
+        if (!"premium".equalsIgnoreCase(plan)) {
             Toast.makeText(this, "Guardar puestos en favoritos requiere el plan Premium", Toast.LENGTH_LONG).show();
             return;
         }
@@ -330,7 +336,7 @@ public class ListaVendedoresActivity extends AppCompatActivity {
                 runOnUiThread(() -> Toast.makeText(this, "Ya alcanzaste el máximo de 5 favoritos", Toast.LENGTH_LONG).show());
                 return;
             }
-            long id = db.favoritoDao().insertar(new Favorito(usuarioId, vendedor.id));
+            long id = db.favoritoDao().insertar(new Favorito(usuarioId, vendedor.idUsuario));
             runOnUiThread(() -> Toast.makeText(this, id == -1 ? "Este puesto ya está guardado" : "Puesto guardado en favoritos", Toast.LENGTH_SHORT).show());
         });
     }

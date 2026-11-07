@@ -3,39 +3,43 @@ package com.tamalon.app.ui;
 import android.content.Intent;
 import android.graphics.Typeface;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.tamalon.app.BuildConfig;
 import com.tamalon.app.R;
-import com.tamalon.app.data.local.AppDatabase;
-import com.tamalon.app.model.Catalogo;
 import com.tamalon.app.model.Usuario;
+import com.tamalon.app.network.*;
 import com.tamalon.app.service.AutenticacionService;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 /**
- * Gestión de catálogos del Vendedor — Tamalón.
- * Estructura consistente con Configuración y Privacidad y seguridad.
+ * Gestión de catálogos del Vendedor conectada a la API REST.
  */
 public class CatalogoActivity extends AppCompatActivity {
 
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
-    private AppDatabase db;
+    private static final String TAG = "CatalogoActivity";
+    private static boolean loggedCatalogos = false;
+
+    private ApiService apiService;
     private int usuarioId = -1;
     private String rol = "vendedor", plan = "gratuito";
 
@@ -56,7 +60,7 @@ public class CatalogoActivity extends AppCompatActivity {
         if (getIntent().getStringExtra("rol") != null) rol = getIntent().getStringExtra("rol");
         if (getIntent().getStringExtra("plan") != null) plan = getIntent().getStringExtra("plan");
 
-        db = AppDatabase.getInstance(this);
+        apiService = ApiClient.getApiService(this);
 
         recycler = findViewById(R.id.catalogs_recycler);
         emptyState = findViewById(R.id.catalogs_empty_state);
@@ -88,7 +92,7 @@ public class CatalogoActivity extends AppCompatActivity {
 
         findViewById(R.id.catalogs_form_save).setOnClickListener(v -> guardar());
 
-        if (!"vendedor".equals(rol)) {
+        if (!"vendedor".equalsIgnoreCase(rol)) {
             Toast.makeText(this, "Esta pantalla es solo para vendedores", Toast.LENGTH_LONG).show();
             finish();
             return;
@@ -101,7 +105,7 @@ public class CatalogoActivity extends AppCompatActivity {
                     runOnUiThread(() -> {
                         usuarioId = u.id;
                         plan = u.plan;
-                        observarCatalogos();
+                        cargarCatalogosApi();
                     });
                 }
 
@@ -114,13 +118,12 @@ public class CatalogoActivity extends AppCompatActivity {
                 }
             });
         } else {
-            observarCatalogos();
+            cargarCatalogosApi();
         }
     }
 
     private void onAddCatalogClicked() {
         if (!esPremium() && catalogoCount >= 1) {
-            // Cuenta gratuita: máximo 1 catálogo. Muestra aviso de Premium
             if (notice != null) {
                 notice.setVisibility(View.VISIBLE);
             }
@@ -131,24 +134,37 @@ public class CatalogoActivity extends AppCompatActivity {
         }
     }
 
-    private void observarCatalogos() {
-        db.catalogoDao().obtenerPorVendedor(usuarioId).observe(this, list -> {
-            adapter.setItems(list);
-            catalogoCount = list.size();
+    private void cargarCatalogosApi() {
+        apiService.obtenerMisCatalogos().enqueue(new Callback<CatalogosResponse>() {
+            @Override
+            public void onResponse(@NonNull Call<CatalogosResponse> call, @NonNull Response<CatalogosResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    if (BuildConfig.DEBUG && !loggedCatalogos) {
+                        loggedCatalogos = true;
+                        Log.d(TAG, "GET /api/catalogos HTTP " + response.code() + " total=" + (response.body().catalogos != null ? response.body().catalogos.size() : 0));
+                    }
+                    List<CatalogoDto> list = response.body().catalogos != null ? response.body().catalogos : new ArrayList<>();
+                    adapter.setItems(list);
+                    catalogoCount = list.size();
 
-            if (emptyState != null) {
-                emptyState.setVisibility(list.isEmpty() ? View.VISIBLE : View.GONE);
+                    if (emptyState != null) {
+                        emptyState.setVisibility(list.isEmpty() ? View.VISIBLE : View.GONE);
+                    }
+                    if (list.isEmpty() && notice != null) {
+                        notice.setVisibility(View.GONE);
+                    }
+                }
             }
 
-            // Ocultar aviso si tiene 0 catálogos
-            if (list.isEmpty() && notice != null) {
-                notice.setVisibility(View.GONE);
+            @Override
+            public void onFailure(@NonNull Call<CatalogosResponse> call, @NonNull Throwable t) {
+                Log.e(TAG, "Error cargando catálogos", t);
             }
         });
     }
 
     private boolean esPremium() {
-        return "premium".equals(plan);
+        return "premium".equalsIgnoreCase(plan);
     }
 
     private void guardar() {
@@ -159,31 +175,43 @@ public class CatalogoActivity extends AppCompatActivity {
             return;
         }
 
-        executor.execute(() -> {
-            int count = db.catalogoDao().contarVisiblesPorVendedor(usuarioId);
-            if (!esPremium() && count >= 1) {
-                runOnUiThread(() -> {
-                    errorText.setText("Una cuenta gratuita puede crear 1 catálogo.");
+        if (!esPremium() && catalogoCount >= 1) {
+            errorText.setText("Una cuenta gratuita puede crear 1 catálogo.");
+            errorText.setVisibility(View.VISIBLE);
+            if (notice != null) notice.setVisibility(View.VISIBLE);
+            return;
+        }
+
+        CrearCatalogoRequest req = new CrearCatalogoRequest(value);
+        apiService.crearCatalogo(req).enqueue(new Callback<CatalogoDto>() {
+            @Override
+            public void onResponse(@NonNull Call<CatalogoDto> call, @NonNull Response<CatalogoDto> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    nameInput.setText("");
+                    errorText.setVisibility(View.GONE);
+                    form.setVisibility(View.GONE);
+                    Toast.makeText(CatalogoActivity.this, "Catálogo creado", Toast.LENGTH_SHORT).show();
+                    cargarCatalogosApi();
+                } else {
+                    String err = ApiErrorHelper.parseError(CatalogoActivity.this, null, response);
+                    errorText.setText(err);
                     errorText.setVisibility(View.VISIBLE);
-                    if (notice != null) notice.setVisibility(View.VISIBLE);
-                });
-                return;
+                }
             }
 
-            db.catalogoDao().insertar(new Catalogo(usuarioId, value));
-            runOnUiThread(() -> {
-                nameInput.setText("");
-                errorText.setVisibility(View.GONE);
-                form.setVisibility(View.GONE);
-                Toast.makeText(this, "Catálogo creado", Toast.LENGTH_SHORT).show();
-            });
+            @Override
+            public void onFailure(@NonNull Call<CatalogoDto> call, @NonNull Throwable t) {
+                String err = ApiErrorHelper.parseError(CatalogoActivity.this, t, null);
+                errorText.setText(err);
+                errorText.setVisibility(View.VISIBLE);
+            }
         });
     }
 
     private class CatalogAdapter extends RecyclerView.Adapter<CatalogAdapter.Holder> {
-        private final List<Catalogo> items = new ArrayList<>();
+        private final List<CatalogoDto> items = new ArrayList<>();
 
-        void setItems(List<Catalogo> values) {
+        void setItems(List<CatalogoDto> values) {
             items.clear();
             items.addAll(values);
             notifyDataSetChanged();
@@ -191,7 +219,6 @@ public class CatalogoActivity extends AppCompatActivity {
 
         @Override
         public Holder onCreateViewHolder(ViewGroup parent, int type) {
-            // Tarjeta estilo Configuración / Privacidad y seguridad
             LinearLayout card = new LinearLayout(parent.getContext());
             card.setOrientation(LinearLayout.HORIZONTAL);
             card.setGravity(Gravity.CENTER_VERTICAL);
@@ -203,7 +230,6 @@ public class CatalogoActivity extends AppCompatActivity {
             lp.bottomMargin = dp(10);
             card.setLayoutParams(lp);
 
-            // Icono dentro de círculo
             ImageView ivIcon = new ImageView(parent.getContext());
             ivIcon.setImageResource(R.drawable.ic_list);
             ivIcon.setBackgroundResource(R.drawable.bg_circle);
@@ -212,7 +238,6 @@ public class CatalogoActivity extends AppCompatActivity {
             iconLp.setMarginEnd(dp(12));
             card.addView(ivIcon, iconLp);
 
-            // Info de textos
             LinearLayout info = new LinearLayout(parent.getContext());
             info.setOrientation(LinearLayout.VERTICAL);
 
@@ -230,7 +255,6 @@ public class CatalogoActivity extends AppCompatActivity {
 
             card.addView(info, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
 
-            // Icono de chevron
             ImageView ivChevron = new ImageView(parent.getContext());
             ivChevron.setImageResource(R.drawable.ic_chevron);
             card.addView(ivChevron, new LinearLayout.LayoutParams(dp(18), dp(18)));
@@ -240,7 +264,7 @@ public class CatalogoActivity extends AppCompatActivity {
 
         @Override
         public void onBindViewHolder(Holder h, int position) {
-            Catalogo c = items.get(position);
+            CatalogoDto c = items.get(position);
             h.title.setText(c.nombre);
             h.subtitle.setText(c.visible ? "Catálogo visible · En tu puesto" : "Catálogo oculto");
 
@@ -267,11 +291,5 @@ public class CatalogoActivity extends AppCompatActivity {
 
     private int dp(float valor) {
         return Math.round(valor * getResources().getDisplayMetrics().density);
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        executor.shutdown();
     }
 }

@@ -32,4 +32,5 @@ module.exports = {
   LIMITE_FAVORITOS_PREMIUM: 5,                 // RF9.1c
   POR_PAGINA: 20,                              // RF21.1 / RF24
   RETENCION_LOGIN_MESES: 12,                   // RF20a
+  UBICACION_VIGENCIA_SEG: 60,
 };

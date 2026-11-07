@@ -12,6 +12,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -30,10 +31,10 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import com.tamalon.app.BuildConfig;
 import com.tamalon.app.R;
 import com.tamalon.app.config.AppConfig;
-import com.tamalon.app.data.local.AppDatabase;
-import com.tamalon.app.model.Usuario;
+import com.tamalon.app.network.*;
 
 import org.osmdroid.config.Configuration;
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
@@ -50,14 +51,21 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
-/** Mapa nativo OpenStreetMap. Los vendedores se filtran a 3 km (RF8). */
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
+/** Mapa nativo OpenStreetMap conectado al backend REST. */
 public class MapaActivity extends AppCompatActivity {
+    private static final String TAG = "MapaActivity";
     private static final int PERM_LOCATION = 1001;
     private static final long RADIO_METROS = 3000L;
     private static final double LIMITE_MAPA_METROS = 6000.0;
+
+    private static boolean loggedUbicacionMia = false;
+    private static boolean loggedFueraDeRuta = false;
+    private static boolean loggedCercanos = false;
 
     private FrameLayout mapContainer;
     private LinearLayout overlayLoading, overlayPermission;
@@ -91,8 +99,8 @@ public class MapaActivity extends AppCompatActivity {
     private String plan = "gratuito";
     private final Map<Integer, Marker> marcadoresVendedores = new HashMap<>();
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private final ExecutorService dbExecutor = Executors.newSingleThreadExecutor();
-    private AppDatabase database;
+    private ApiService apiService;
+    private long ultimaActualizacionServidorMs = 0;
 
     private final Runnable refrescarVendedoresRunnable = new Runnable() {
         @Override public void run() {
@@ -110,7 +118,8 @@ public class MapaActivity extends AppCompatActivity {
         if (rolRecibido != null) rol = rolRecibido;
         if (planRecibido != null) plan = planRecibido;
 
-        database = AppDatabase.getInstance(getApplicationContext());
+        apiService = ApiClient.getApiService(this);
+
         mapContainer = findViewById(R.id.map_container);
         overlayLoading = findViewById(R.id.map_overlay_loading);
         overlayPermission = findViewById(R.id.map_overlay_permission);
@@ -123,9 +132,13 @@ public class MapaActivity extends AppCompatActivity {
         mapSearchInput = findViewById(R.id.map_search_input);
         mapSearchInput.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
-            @Override public void onTextChanged(CharSequence s, int start, int before, int count) { textoBusquedaMapa = s.toString().trim().toLowerCase(java.util.Locale.ROOT); refrescarVendedoresCercanos(); }
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                textoBusquedaMapa = s.toString().trim().toLowerCase(java.util.Locale.ROOT);
+                refrescarVendedoresCercanos();
+            }
             @Override public void afterTextChanged(Editable s) { }
         });
+
         android.content.SharedPreferences filtrosPrefs = getSharedPreferences("tamalon_map_filters_" + usuarioId, MODE_PRIVATE);
         filtrosAntojitos.addAll(filtrosPrefs.getStringSet("categorias", new HashSet<>()));
         construirBotonesPreferencias();
@@ -141,10 +154,10 @@ public class MapaActivity extends AppCompatActivity {
         vendorQuickCatalogs = findViewById(R.id.vendor_quick_catalogs);
         vendorQuickRoutes = findViewById(R.id.vendor_quick_routes);
 
-                View searchContainer = findViewById(R.id.map_search_container);
+        View searchContainer = findViewById(R.id.map_search_container);
         View categoryScroll = findViewById(R.id.map_category_scroll);
 
-        if ("vendedor".equals(rol)) {
+        if ("vendedor".equalsIgnoreCase(rol)) {
             if (searchContainer != null) searchContainer.setVisibility(View.GONE);
             if (categoryScroll != null) categoryScroll.setVisibility(View.GONE);
             if (vendorRouteCard != null) vendorRouteCard.setVisibility(View.VISIBLE);
@@ -160,7 +173,7 @@ public class MapaActivity extends AppCompatActivity {
             }
             if (vendorQuickRoutes != null) {
                 vendorQuickRoutes.setOnClickListener(v -> {
-                    if (!"premium".equals(plan)) {
+                    if (!"premium".equalsIgnoreCase(plan)) {
                         Toast.makeText(this, "Rutas: Consulta y administra las funciones de rutas disponibles con Tamalón Premium", Toast.LENGTH_LONG).show();
                         Intent i = new Intent(this, PagoActivity.class);
                         i.putExtra("usuario_id", usuarioId);
@@ -245,11 +258,13 @@ public class MapaActivity extends AppCompatActivity {
     @Override protected void onDestroy() {
         handler.removeCallbacks(refrescarVendedoresRunnable);
         detenerActualizacionesUbicacion();
+        if (enRuta) {
+            enviarFueraDeRutaServidor();
+        }
         if (mapView != null) {
             mapView.onDetach();
             mapView = null;
         }
-        dbExecutor.shutdown();
         super.onDestroy();
     }
 
@@ -349,15 +364,48 @@ public class MapaActivity extends AppCompatActivity {
         }
         mapView.invalidate();
 
-        if ("vendedor".equals(rol) && enRuta && usuarioId > 0) {
-            final double lat = location.getLatitude();
-            final double lon = location.getLongitude();
-            final long timestamp = System.currentTimeMillis();
-            dbExecutor.execute(() -> {
-                database.usuarioDao().actualizarUbicacionVendedor(usuarioId, lat, lon, timestamp);
-                database.usuarioDao().actualizarDisponibilidadVendedor(usuarioId, true, timestamp);
-            });
+        if ("vendedor".equalsIgnoreCase(rol) && enRuta) {
+            long ahora = System.currentTimeMillis();
+            if (ahora - ultimaActualizacionServidorMs >= AppConfig.INTERVALO_ACTUALIZACION_MS) {
+                ultimaActualizacionServidorMs = ahora;
+                enviarUbicacionServidor(location.getLatitude(), location.getLongitude());
+            }
         }
+    }
+
+    private void enviarUbicacionServidor(double lat, double lng) {
+        UbicacionMiaRequest req = new UbicacionMiaRequest(lat, lng);
+        apiService.actualizarUbicacionMia(req).enqueue(new Callback<UbicacionMiaResponse>() {
+            @Override
+            public void onResponse(@NonNull Call<UbicacionMiaResponse> call, @NonNull Response<UbicacionMiaResponse> response) {
+                if (BuildConfig.DEBUG && !loggedUbicacionMia) {
+                    loggedUbicacionMia = true;
+                    Log.d(TAG, "PUT /api/ubicacion/mia HTTP " + response.code() + " msg=" + response.message());
+                }
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<UbicacionMiaResponse> call, @NonNull Throwable t) {
+                Log.e(TAG, "Error actualizando ubicación en el servidor", t);
+            }
+        });
+    }
+
+    private void enviarFueraDeRutaServidor() {
+        apiService.fueraDeRuta().enqueue(new Callback<FueraDeRutaResponse>() {
+            @Override
+            public void onResponse(@NonNull Call<FueraDeRutaResponse> call, @NonNull Response<FueraDeRutaResponse> response) {
+                if (BuildConfig.DEBUG && !loggedFueraDeRuta) {
+                    loggedFueraDeRuta = true;
+                    Log.d(TAG, "PUT /api/ubicacion/mia/fuera-de-ruta HTTP " + response.code());
+                }
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<FueraDeRutaResponse> call, @NonNull Throwable t) {
+                Log.e(TAG, "Error enviando fuera de ruta al servidor", t);
+            }
+        });
     }
 
     private void limitarMapaAlrededor(double latitud, double longitud) {
@@ -373,62 +421,57 @@ public class MapaActivity extends AppCompatActivity {
 
     private void refrescarVendedoresCercanos() {
         if (ultimaUbicacion == null || mapView == null || isFinishing()) return;
-        final double latCliente = ultimaUbicacion.getLatitude();
-        final double lonCliente = ultimaUbicacion.getLongitude();
-        final long ahora = System.currentTimeMillis();
-        final Set<String> filtrosActuales = new HashSet<>(filtrosAntojitos);
-        final String busquedaActual = textoBusquedaMapa;
-        dbExecutor.execute(() -> {
-            database.usuarioDao().desactivarVendedoresSinSenal(ahora - AppConfig.TIMEOUT_FUERA_DE_RUTA_MS);
-            List<Usuario> vendedores = database.usuarioDao().obtenerVendedoresEnRuta(ahora - AppConfig.TIMEOUT_FUERA_DE_RUTA_MS);
-            List<Usuario> cercanos = new ArrayList<>();
-            for (Usuario vendedor : vendedores) {
-                if (vendedor.id == usuarioId || vendedor.ubicacionLatitud == null || vendedor.ubicacionLongitud == null) continue;
-                float[] distancia = new float[1];
-                Location.distanceBetween(latCliente, lonCliente, vendedor.ubicacionLatitud, vendedor.ubicacionLongitud, distancia);
-                if (distancia[0] <= RADIO_METROS) {
-                    if (!busquedaActual.isEmpty() && (vendedor.nombreCompleto == null || !vendedor.nombreCompleto.toLowerCase(java.util.Locale.ROOT).contains(busquedaActual))) continue;
-                    boolean coincide = filtrosActuales.isEmpty();
-                    if (!coincide) {
-                        for (String categoria : filtrosActuales) {
-                            if (database.productoDao().contarVisiblesPorVendedorYCategoria(vendedor.id, categoria) > 0) { coincide = true; break; }
-                        }
+        double lat = ultimaUbicacion.getLatitude();
+        double lng = ultimaUbicacion.getLongitude();
+
+        String cat = filtrosAntojitos.isEmpty() ? null : filtrosAntojitos.iterator().next();
+        String buscar = textoBusquedaMapa.isEmpty() ? null : textoBusquedaMapa;
+
+        apiService.obtenerCercanos(lat, lng, AppConfig.RADIO_KM, cat, buscar).enqueue(new Callback<CercanosResponse>() {
+            @Override
+            public void onResponse(@NonNull Call<CercanosResponse> call, @NonNull Response<CercanosResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    if (BuildConfig.DEBUG && !loggedCercanos) {
+                        loggedCercanos = true;
+                        Log.d(TAG, "GET /api/ubicacion/cercanos HTTP " + response.code() + " vendedores=" + (response.body().vendedores != null ? response.body().vendedores.size() : 0));
                     }
-                    if (coincide) cercanos.add(vendedor);
+                    dibujarVendedores(response.body().vendedores, lat, lng);
                 }
             }
-            runOnUiThread(() -> dibujarVendedores(cercanos, latCliente, lonCliente));
+
+            @Override
+            public void onFailure(@NonNull Call<CercanosResponse> call, @NonNull Throwable t) {
+                Log.e(TAG, "Error obteniendo vendedores cercanos", t);
+            }
         });
     }
 
-    private void dibujarVendedores(List<Usuario> vendedores, double latCliente, double lonCliente) {
+    private void dibujarVendedores(List<VendedorCercanoDto> vendedores, double latCliente, double lonCliente) {
         if (mapView == null || isFinishing()) return;
+        if (vendedores == null) vendedores = new ArrayList<>();
+
         Set<Integer> idsVisibles = new HashSet<>();
-        for (Usuario vendedor : vendedores) {
-            if (vendedor.ubicacionLatitud == null || vendedor.ubicacionLongitud == null) continue;
-            idsVisibles.add(vendedor.id);
-            GeoPoint punto = new GeoPoint(vendedor.ubicacionLatitud, vendedor.ubicacionLongitud);
-            Marker marker = marcadoresVendedores.get(vendedor.id);
+        for (VendedorCercanoDto vendedor : vendedores) {
+            if (vendedor.idUsuario == usuarioId) continue;
+            idsVisibles.add(vendedor.idUsuario);
+            GeoPoint punto = new GeoPoint(vendedor.latitud, vendedor.longitud);
+            Marker marker = marcadoresVendedores.get(vendedor.idUsuario);
             if (marker == null) {
                 marker = new Marker(mapView);
                 marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
-                final int idVendedor = vendedor.id;
-                final Usuario vFinal = vendedor;
+                final VendedorCercanoDto vFinal = vendedor;
                 marker.setOnMarkerClickListener((m, map) -> {
-                    float[] dist = new float[1];
-                    Location.distanceBetween(latCliente, lonCliente, vFinal.ubicacionLatitud, vFinal.ubicacionLongitud, dist);
-                    mostrarTarjetaVendedor(vFinal, dist[0]);
+                    mostrarTarjetaVendedor(vFinal);
                     return true;
                 });
-                marcadoresVendedores.put(vendedor.id, marker);
+                marcadoresVendedores.put(vendedor.idUsuario, marker);
                 mapView.getOverlays().add(marker);
             }
-            float[] distancia = new float[1];
-            Location.distanceBetween(latCliente, lonCliente, vendedor.ubicacionLatitud, vendedor.ubicacionLongitud, distancia);
             marker.setPosition(punto);
             marker.setTitle(vendedor.nombreCompleto == null ? "Vendedor cercano" : vendedor.nombreCompleto);
-            marker.setSnippet(String.format(java.util.Locale.getDefault(), "A %.0f m de ti · En ruta", distancia[0]));
+            marker.setSnippet(String.format(java.util.Locale.getDefault(), "A %.0f m de ti · En ruta", vendedor.distanciaM));
         }
+
         Set<Integer> quitar = new HashSet<>(marcadoresVendedores.keySet());
         quitar.removeAll(idsVisibles);
         for (Integer id : quitar) {
@@ -438,15 +481,13 @@ public class MapaActivity extends AppCompatActivity {
         mapView.invalidate();
     }
 
-
-
-    private void mostrarTarjetaVendedor(Usuario vendedor, float distanciaMetros) {
+    private void mostrarTarjetaVendedor(VendedorCercanoDto vendedor) {
         if (cardVendedor == null) return;
         if (cardVendorName != null) {
             cardVendorName.setText(vendedor.nombreCompleto == null ? "Puesto de Antojitos" : vendedor.nombreCompleto);
         }
         if (cardVendorDistance != null) {
-            cardVendorDistance.setText(String.format(java.util.Locale.getDefault(), "A %.0f m de ti · En ruta activa", distanciaMetros));
+            cardVendorDistance.setText(String.format(java.util.Locale.getDefault(), "A %.0f m de ti · En ruta activa", vendedor.distanciaM));
         }
         if (cardVendorDesc != null) {
             cardVendorDesc.setText("Puesto local de antojitos mexicanos caseros. Toca para ver su catálogo completo de productos.");
@@ -454,14 +495,14 @@ public class MapaActivity extends AppCompatActivity {
         if (cardBtnCatalog != null) {
             cardBtnCatalog.setOnClickListener(v -> {
                 Intent i = new Intent(this, CatalogoPublicoActivity.class);
-                i.putExtra("vendedor_id", vendedor.id);
+                i.putExtra("vendedor_id", vendedor.idUsuario);
                 startActivity(i);
             });
         }
         if (cardBtnProfile != null) {
             cardBtnProfile.setOnClickListener(v -> {
                 Intent i = new Intent(this, VendedorDetailActivity.class);
-                i.putExtra("vendedor_id", vendedor.id);
+                i.putExtra("vendedor_id", vendedor.idUsuario);
                 i.putExtra("plan_cliente", plan);
                 startActivity(i);
             });
@@ -509,7 +550,6 @@ public class MapaActivity extends AppCompatActivity {
         forma.setColor(fondo);
         forma.setCornerRadius(dp(22));
         forma.setStroke(dp(1), borde);
-        // Mantiene el estado seleccionado y añade una respuesta táctil sin el tinte morado de Material.
         RippleDrawable fondoInteractivo = new RippleDrawable(
                 ColorStateList.valueOf(getColor(R.color.tamalon_sand)), forma, null);
         boton.setBackground(fondoInteractivo);
@@ -523,7 +563,6 @@ public class MapaActivity extends AppCompatActivity {
     private int dp(float valor) {
         return Math.round(valor * getResources().getDisplayMetrics().density);
     }
-
 
     private void actualizarVistaEstadoRuta() {
         if (vendorRouteStateText != null) {
@@ -555,19 +594,12 @@ public class MapaActivity extends AppCompatActivity {
         }
         enRuta = !enRuta;
         actualizarVistaEstadoRuta();
-        final boolean disponibilidad = enRuta;
-        final long timestamp = System.currentTimeMillis();
-        if (usuarioId > 0) {
-            dbExecutor.execute(() -> {
-                if (disponibilidad && ultimaUbicacion != null) {
-                    database.usuarioDao().actualizarUbicacionVendedor(usuarioId,
-                            ultimaUbicacion.getLatitude(), ultimaUbicacion.getLongitude(), timestamp);
-                }
-                database.usuarioDao().actualizarDisponibilidadVendedor(usuarioId, disponibilidad, timestamp);
-            });
+        if (enRuta && ultimaUbicacion != null) {
+            enviarUbicacionServidor(ultimaUbicacion.getLatitude(), ultimaUbicacion.getLongitude());
+        } else if (!enRuta) {
+            enviarFueraDeRutaServidor();
+            refrescarVendedoresCercanos();
         }
-        // Notificación de disponibilidad desactivada para no causar molestias
-        if (!enRuta) refrescarVendedoresCercanos();
     }
 
     private void abrirConfiguracionPermisos() {

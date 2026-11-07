@@ -18,4 +18,7 @@ module.exports = {
   NO_ENCONTRADO: 'Recurso no encontrado',
   CUENTA_NO_ENCONTRADA: 'Cuenta no encontrada',
   SOLICITUD_MAL_FORMADA: 'La solicitud está mal formada',
+  UBICACION_INVALIDA: 'Latitud y longitud deben ser números válidos dentro de sus rangos',
+  FILTRO_UBICACION_INVALIDO: 'Los filtros de ubicación no son válidos',
+  VENDEDOR_NO_ENCONTRADO: 'Vendedor no encontrado',
 };

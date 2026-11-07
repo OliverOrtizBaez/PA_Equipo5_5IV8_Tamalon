@@ -12,6 +12,7 @@ const favoritosRoutes = require('./js/routes/favoritosRoutes');
 const catalogosRoutes = require('./js/routes/catalogosRoutes');
 const usuariosRoutes = require('./js/routes/usuariosRoutes');
 const contactoRoutes = require('./js/routes/contactoRoutes');
+const ubicacionRoutes = require('./js/routes/ubicacionRoutes');
 const { noEncontrado, manejadorErrores } = require('./js/middlewares/errores');
 const { iniciarJobs } = require('./js/jobs');
 
@@ -40,6 +41,7 @@ app.use('/api/favoritos', favoritosRoutes);
 app.use('/api/catalogos', catalogosRoutes);
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/contacto', contactoRoutes);
+app.use('/api/ubicacion', ubicacionRoutes);
 app.use('/api', noEncontrado);
 
 app.use('/css', express.static(path.join(__dirname, 'css')));

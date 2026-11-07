@@ -11,6 +11,7 @@ import com.tamalon.app.ui.MapaActivity;
 public class MainActivity extends AppCompatActivity {
     private AutenticacionService auth;
     @Override protected void onCreate(Bundle savedInstanceState) {
+
         super.onCreate(savedInstanceState);
         auth = new AutenticacionService(this);
         if (!auth.haySesionActiva()) { abrirLogin(); return; }
