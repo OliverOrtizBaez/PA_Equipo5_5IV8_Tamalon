@@ -21,6 +21,9 @@ public class DtoUser {
     @SerializedName("rol")
     public String rol;
 
+    @SerializedName("plan")
+    public String plan;
+
     @SerializedName("estado_cuenta")
     public String estadoCuenta;
 

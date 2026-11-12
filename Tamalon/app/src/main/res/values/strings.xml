@@ -427,4 +427,18 @@
     <string name="pago_mercadopago_btn">Continuar con Mercado Pago</string>
     <string name="pago_security_note">El pago se procesará mediante el proveedor seguro cuando esté disponible.</string>
     <string name="vendor_categories_label">Categorías</string>
+
+    <!-- Pago Simulado -->
+    <string name="pago_aviso_simulado">Pago simulado: no se realiza ningún cobro</string>
+    <string name="btn_probar_premium_simulado">Probar Premium (simulado)</string>
+    <string name="btn_simular_rechazo">Simular rechazo</string>
+    <string name="pago_exito_simulado">Premium activado (simulado)</string>
+    <string name="pago_simulado_deshabilitado">El pago simulado no está disponible por ahora</string>
+    <string name="pago_simulado_deshabilitado_info">El servicio de pago simulado no se encuentra disponible actualmente.</string>
+    <string name="pago_rechazado_msg">El pago simulado fue rechazado.</string>
+    <string name="pago_error_403">No tienes permisos para procesar esta solicitud.</string>
+    <string name="pago_error_401">Sesión expirada. Por favor vuelve a iniciar sesión.</string>
+    <string name="pago_error_red">Sin conexión a internet. Verifica tu conexión e intenta de nuevo.</string>
+    <string name="pago_cargando_plan">Cargando información del plan...</string>
+    <string name="pago_procesando">Procesando solicitud simulada...</string>
 </resources>

@@ -70,7 +70,7 @@ function leerRango(query) {
 
 async function pagosAprobados(desde, hasta) {
   const [pagos] = await pool.query(
-    `SELECT s.fech_pago, s.id_usuario, u.correo, s.suscrs_monto
+    `SELECT s.fech_pago, s.id_usuario, u.correo, s.suscrs_monto, s.codigo_transaccion
        FROM suscripcion s JOIN usuarios u ON u.id_usuario = s.id_usuario
       WHERE s.estado_pago = 'Aprobado' AND s.moneda = 'MXN' AND s.fech_pago BETWEEN ? AND ?
       ORDER BY s.fech_pago ASC, s.id_suscripcion ASC`,
@@ -97,13 +97,14 @@ const celdaCsv = (valor) => {
 };
 
 function generarCsv(pagos) {
-  const lineas = [['fecha', 'ID de cuenta', 'correo de la cuenta', 'monto'].join(',')];
+  const lineas = [['fecha', 'ID de cuenta', 'correo de la cuenta', 'monto', 'codigo_transaccion'].join(',')];
   for (const p of pagos) {
     lineas.push([
       celdaCsv(F.formatoFechaHora(new Date(p.fech_pago), C.ZONA_NEGOCIO)),
       celdaCsv(p.id_usuario),
       celdaCsv(p.correo),
       celdaCsv(Number(p.suscrs_monto).toFixed(2)),
+      celdaCsv(p.codigo_transaccion || ''),
     ].join(','));
   }
   return `${lineas.join('\r\n')}\r\n`;
@@ -126,7 +127,8 @@ function generarPdf({ inicio, fin, pagos }) {
       doc.text('Correo de la cuenta', X.correo, y, { width: 235, lineBreak: false });
       doc.text('Monto (MXN)', X.monto, y, { width: 85, align: 'right', lineBreak: false });
       doc.moveTo(40, y + 13).lineTo(555, y + 13).stroke();
-      doc.y = y + 18;
+      doc.text('Referencia / código de transacción', 40, y + 17, { width: 515, lineBreak: false });
+      doc.y = y + 31;
       doc.font('Helvetica').fontSize(9);
     };
 
@@ -136,13 +138,14 @@ function generarPdf({ inicio, fin, pagos }) {
     encabezado();
 
     for (const p of pagos) {
-      if (doc.y > 770) { doc.addPage(); encabezado(); }
+      if (doc.y > 750) { doc.addPage(); encabezado(); }
       const y = doc.y;
       doc.text(F.formatoFechaHora(new Date(p.fech_pago), C.ZONA_NEGOCIO), X.fecha, y, { width: 125, lineBreak: false });
       doc.text(String(p.id_usuario), X.id, y, { width: 55, lineBreak: false });
       doc.text(p.correo, X.correo, y, { width: 235, lineBreak: false, ellipsis: true });
       doc.text(Number(p.suscrs_monto).toFixed(2), X.monto, y, { width: 85, align: 'right', lineBreak: false });
-      doc.y = y + 14;
+      doc.text(p.codigo_transaccion || '-', 40, y + 12, { width: 515, lineBreak: false });
+      doc.y = y + 25;
     }
     doc.end();
   });

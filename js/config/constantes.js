@@ -25,6 +25,7 @@ module.exports = {
   RECUPERACION_MAX_SOLICITUDES: 3,             // RF3.1b
   RECUPERACION_VENTANA_MIN: 60,                // RF3.1b
   RECUPERACION_VIGENCIA_MIN: 30,               // RF3.3
+  PAGO_SIMULADO_MONTO: process.env.PAGO_SIMULADO_MONTO || '0.00',
   PREMIUM_DIAS: 30,                            // RF5.7 / RF17b
   LIMITE_CATALOGOS_PREMIUM: 3,                 // RF10.2
   LIMITE_PRODUCTOS_GRATIS: 10,                 // RF11.1

@@ -43,6 +43,19 @@ public class TokenStore {
                 .apply();
     }
 
+    public void saveUser(DtoUser dtoUser) {
+        saveSession(getToken(), getExpires(), dtoUser);
+    }
+
+    public void updatePlanAndRol(String plan, String rol) {
+        DtoUser user = getUser();
+        if (user != null) {
+            if (plan != null) user.plan = plan;
+            if (rol != null) user.rol = rol;
+            saveUser(user);
+        }
+    }
+
     public String getToken() {
         return prefs.getString(KEY_TOKEN, null);
     }

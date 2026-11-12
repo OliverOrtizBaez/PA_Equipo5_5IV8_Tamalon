@@ -190,7 +190,8 @@ public class AutenticacionService {
             u.rol = "cliente";
         }
 
-        if (roleLower.contains("premium")) {
+        String planLower = dto.plan != null ? dto.plan.toLowerCase() : "";
+        if (roleLower.contains("premium") || planLower.contains("premium")) {
             u.plan = "premium";
         } else {
             u.plan = "gratuito";

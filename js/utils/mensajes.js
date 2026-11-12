@@ -10,6 +10,10 @@ module.exports = {
   BLOQUEO_TEMPORAL: 'Demasiados intentos. Intenta de nuevo en 15 minutos',             // RF25.21
   SIN_TRAFICO: 'No hay inicios de sesión en la fecha seleccionada',                    // RF25.25
   OPERACION_NO_PERMITIDA: 'No puedes suspender ni cambiar la suscripción de una cuenta de Administrador', // RF25.26
+  PAGO_SIMULADO_NO_HABILITADO: 'El pago simulado no está habilitado',
+  PAGO_SIMULADO_APROBADO: 'Pago simulado aprobado. No se realizó ningún cobro.',
+  PAGO_SIMULADO_RECHAZADO: 'Pago simulado rechazado. No se realizó ningún cobro.',
+  RESULTADO_PAGO_INVALIDO: 'El resultado debe ser aprobado o rechazado',
   CREDENCIALES_INCORRECTAS: 'Correo o contraseña incorrectos',                         // RF2.3
   USUARIO_SUSPENDIDO: 'Usuario suspendido',                                            // RF22.4 / RF22.5
   // Mensajes propios (no definidos en los RF)

@@ -1,3 +1,4 @@
+// NO SE USA: Este proyecto no integra pasarela real. En su lugar se utiliza PagoSimuladoService.
 package com.tamalon.app.payment;
 
 import android.app.Activity;

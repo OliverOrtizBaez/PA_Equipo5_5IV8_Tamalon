@@ -375,4 +375,18 @@
     <string name="btn_add">Add</string>
     <string name="btn_retry">Retry</string>
     <string name="btn_go_premium">See Premium</string>
+
+    <!-- Simulated Payment -->
+    <string name="pago_aviso_simulado">Simulated payment: no charge is made</string>
+    <string name="btn_probar_premium_simulado">Try Premium (simulated)</string>
+    <string name="btn_simular_rechazo">Simulate rejection</string>
+    <string name="pago_exito_simulado">Premium activated (simulated)</string>
+    <string name="pago_simulado_deshabilitado">Simulated payment is currently not available</string>
+    <string name="pago_simulado_deshabilitado_info">The simulated payment service is currently disabled.</string>
+    <string name="pago_rechazado_msg">The simulated payment was rejected.</string>
+    <string name="pago_error_403">You do not have permission to process this request.</string>
+    <string name="pago_error_401">Session expired. Please sign in again.</string>
+    <string name="pago_error_red">No internet connection. Please check your network and try again.</string>
+    <string name="pago_cargando_plan">Loading plan information...</string>
+    <string name="pago_procesando">Processing simulated request...</string>
 </resources>

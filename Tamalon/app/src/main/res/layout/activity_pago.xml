@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Pantalla de suscripción. Premium solo se activa tras verificación real del pago en backend. -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -100,22 +99,57 @@
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Controles heredados de simulación, desactivados -->
-        
+        <!-- Indicador de carga -->
+        <ProgressBar
+            android:id="@+id/pago_progress_bar"
+            style="?android:attr/progressBarStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="20dp"
+            android:visibility="gone" />
 
-        <!-- Botón de pago real; se habilitará al conectar y verificar el backend -->
+        <!-- Aviso permanente de pago simulado -->
+        <TextView
+            android:id="@+id/pago_tv_aviso_simulado"
+            style="@style/Tamalon.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="center"
+            android:text="@string/pago_aviso_simulado"
+            android:textColor="@color/tamalon_ink"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:visibility="visible" />
+
+        <!-- Botón principal: Probar Premium (simulado) -->
         <android.widget.Button
             android:id="@+id/pago_btn_mercadopago"
             android:layout_width="match_parent"
             android:layout_height="48dp"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="12dp"
             android:background="@drawable/bg_button"
             android:fontFamily="@font/inter"
-            android:text="@string/pago_mercadopago_btn"
+            android:text="@string/btn_probar_premium_simulado"
             android:textAllCaps="false"
             android:textColor="@color/tamalon_field_text"
             android:textSize="11sp"
             android:visibility="visible" />
+
+        <!-- Botón secundario de debug: Simular rechazo -->
+        <android.widget.Button
+            android:id="@+id/pago_btn_simular_rechazo"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/bg_button_destructive"
+            android:fontFamily="@font/inter"
+            android:text="@string/btn_simular_rechazo"
+            android:textAllCaps="false"
+            android:textColor="@color/tamalon_field_text"
+            android:textSize="11sp"
+            android:visibility="gone" />
 
         <!-- Estado del proceso de pago -->
         <TextView
@@ -130,14 +164,5 @@
             android:textSize="9sp"
             android:visibility="gone" />
 
-        <!-- Nota de seguridad -->
-        <TextView
-            style="@style/Tamalon.Caption"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:gravity="center"
-            android:text="El pago solo se habilitará cuando la pasarela segura esté configurada. No compartas datos de tarjeta fuera del proveedor de pagos."
-            android:textSize="8sp" />
     </LinearLayout>
 </ScrollView>

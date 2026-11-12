@@ -96,5 +96,8 @@ public interface ApiService {
 
     // Suscripciones
     @GET("api/suscripciones/mi-plan")
-    Call<SuscripcionResponse> obtenerMiPlan();
+    Call<MiPlanResponse> obtenerMiPlan();
+
+    @POST("api/suscripciones/procesar-pago")
+    Call<ProcesarPagoResponse> procesarPago(@Body ProcesarPagoRequest request);
 }
