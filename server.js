@@ -16,7 +16,7 @@ const ubicacionRoutes = require('./js/routes/ubicacionRoutes');
 const { noEncontrado, manejadorErrores } = require('./js/middlewares/errores');
 const { iniciarJobs } = require('./js/jobs');
 
-const app = express();
+const app = express(); 
 app.disable('x-powered-by');
 
 // CORS: la app movil no lo necesita; el panel web si cuando vive en otro dominio (Vercel)
