@@ -1060,11 +1060,14 @@ footer {
 }
 
 .footer-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.2rem 2rem;
+    color: #C7B299;
+    width: 100%;
     max-width: 1280px;
     margin: 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
 }
 
 .footer-logo {
@@ -1083,13 +1086,51 @@ footer {
 .footer-copy {
     font-size: .75rem;
     color: var(--tan);
+    margin: 0;
 }
 
 .footer-gh {
     color: var(--tan);
     transition: color .2s;
+    display: flex;
+    align-items: center;
+    text-decoration: none;
 }
 
 .footer-gh:hover {
     color: var(--cream);
+}
+
+
+/*LO nuevo*/
+
+
+/* Agrupador central para el texto y los términos */
+
+.footer-legal-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+
+/* Estilo para el separador */
+
+.footer-separator {
+    color: rgba(199, 178, 153, 0.4);
+}
+
+
+/* Estilo para el enlace de términos para que luzca bien */
+
+.footer-link {
+    color: #C7B299;
+    text-decoration: none;
+    font-size: 0.85rem;
+    transition: color 0.2s ease;
+}
+
+.footer-link:hover {
+    color: #ffffff;
+    text-decoration: underline;
 }
