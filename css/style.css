@@ -484,9 +484,20 @@ h2 {
 .quienes-body {
     font-size: .95rem;
     line-height: 1.75;
-    color: var(--mid);
     font-weight: 300;
     margin-top: 1rem;
+    color: #3D2B1F;
+    & a {
+        text-decoration: none;
+        color: #3D2B1F;
+        transition: color 0.2s ease;
+    }
+    & a:hover {
+        color: #6B4E35;
+    }
+    & a:active {
+        color: #C7B299;
+    }
 }
 
 .quienes-body+.quienes-body {

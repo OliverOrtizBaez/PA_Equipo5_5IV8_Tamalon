@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
     <title>Iniciar sesión | Tamalon</title>
     <link rel="stylesheet" href="../css/style.css">
 </head>
+
 <body>
     <main>
         <section id="hero">
@@ -20,8 +22,7 @@
                         <span class="logo-text">Tamalon</span>
                     </a>
                     <div class="badge">
-                        <span class="badge-dot"></span>
-                        Bienvenido de vuelta
+                        <span class="badge-dot"></span> Bienvenido de vuelta
                     </div>
                     <h1>Qué gusto verte</h1>
                     <p class="hero-sub">
@@ -69,19 +70,18 @@
                             <button type="submit" class="btn-submit">Entrar</button>
                             <p id="login-message" class="quienes-body" role="status" aria-live="polite"></p>
                         </form>
-                        <p class="quienes-body">
-                            <a href="#recuperar" id="show-recovery">¿Olvidaste tu contraseña?</a>
+                        <p>
+                            <a href="#recuperar" id="show-recovery" class="quienes-body">¿Olvidaste tu contraseña?</a>
                         </p>
                         <p class="quienes-body">
-                            <a href="../">Volver a Tamalon</a>
+                            <a href="../" class="quienes-body">Volver a Tamalon</a>
                         </p>
                     </div>
 
                     <div id="recovery-panel" hidden>
                         <h2>Recuperar contraseña</h2>
                         <p class="quienes-body">
-                            Escribe el correo asociado a tu cuenta. Si está registrado, recibirás instrucciones para
-                            restablecer tu contraseña.
+                            Escribe el correo asociado a tu cuenta. Si está registrado, recibirás instrucciones para restablecer tu contraseña.
                         </p>
                         <form id="recovery-form">
                             <div class="field">
@@ -113,7 +113,9 @@
         async function enviarSolicitud(url, datos) {
             const respuesta = await fetch(url, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json'
+                },
                 body: JSON.stringify(datos),
             });
             const resultado = await respuesta.json();
@@ -139,7 +141,7 @@
             document.getElementById('correo').focus();
         });
 
-        document.getElementById('login-form').addEventListener('submit', async (evento) => {
+        document.getElementById('login-form').addEventListener('submit', async(evento) => {
             evento.preventDefault();
             const formulario = evento.currentTarget;
             const boton = formulario.querySelector('button[type="submit"]');
@@ -153,11 +155,13 @@
                     zona_horaria: Intl.DateTimeFormat().resolvedOptions().timeZone,
                 });
 
-                if (resultado.usuario?.rol !== 'Administrador') {
+                if (resultado.usuario ? .rol !== 'Administrador') {
                     try {
                         await fetch('/api/auth/logout', {
                             method: 'POST',
-                            headers: { Authorization: `Bearer ${resultado.token}` },
+                            headers: {
+                                Authorization: `Bearer ${resultado.token}`
+                            },
                         });
                     } catch (error) {
                         console.error('No se pudo cerrar la sesión sin permisos administrativos:', error);
@@ -175,7 +179,7 @@
             }
         });
 
-        document.getElementById('recovery-form').addEventListener('submit', async (evento) => {
+        document.getElementById('recovery-form').addEventListener('submit', async(evento) => {
             evento.preventDefault();
             const formulario = evento.currentTarget;
             const boton = formulario.querySelector('button[type="submit"]');
@@ -195,4 +199,5 @@
         });
     </script>
 </body>
+
 </html>
