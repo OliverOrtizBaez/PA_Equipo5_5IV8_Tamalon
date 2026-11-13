@@ -198,11 +198,10 @@
                     <span class="section-tag">El equipo</span>
                     <h2>Quiénes Somos</h2>
                     <p class="quienes-body" style="margin-top:1rem">
-                        Somos un equipo de estudiantes universitarios apasionados por el impacto social de la tecnología. Desarrollamos Tamalon como proyecto escolar con el objetivo de conectar a los vendedores ambulantes de tamales con sus clientes mediante herramientas digitales
-                        accesibles.
+                        Somos un equipo de estudiantes apasionados por el impacto social de la tecnología. Desarrollamos Tamalon como proyecto escolar con el objetivo de conectar a los vendedores ambulantes con sus clientes mediante herramientas digitales accesibles.
                     </p>
                     <p class="quienes-body" style="margin-top:.75rem">
-                        Nuestra <strong>misión social</strong> es visibilizar el trabajo de los tamaleros callejeros, digitalizar sus rutas y horarios, y facilitar que más personas puedan encontrarlos — apoyando directamente la economía informal de nuestras
+                        Nuestra <strong>misión</strong> es visibilizar el trabajo de los comerciantes informales, digitalizar sus rutas y horarios, y facilitar que más personas puedan encontrarlos — apoyando directamente la economía informal de nuestras
                         comunidades.
                     </p>
                 </div>
@@ -291,52 +290,39 @@
             </div>
             <div class="producto-grid">
                 <!-- Map -->
-                <div class="map-wrap">
+                <div class="map-wrap" id="map-wrap">
                     <svg class="map-bg" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <pattern id="grid2" width="40" height="40" patternUnits="userSpaceOnUse">
-              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#E6D5BE" stroke-width="0.8"/>
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#grid2)"/>
-          <line x1="0" y1="45%" x2="100%" y2="45%" stroke="#D8C3A5" stroke-width="8" opacity="0.6"/>
-          <line x1="0" y1="70%" x2="100%" y2="70%" stroke="#D8C3A5" stroke-width="5" opacity="0.4"/>
-          <line x1="30%" y1="0" x2="30%" y2="100%" stroke="#D8C3A5" stroke-width="8" opacity="0.6"/>
-          <line x1="65%" y1="0" x2="65%" y2="100%" stroke="#D8C3A5" stroke-width="5" opacity="0.4"/>
-          <rect x="5%" y="5%" width="22%" height="35%" rx="2" fill="#E6D5BE" opacity="0.5"/>
-          <rect x="35%" y="5%" width="24%" height="20%" rx="2" fill="#E6D5BE" opacity="0.5"/>
-          <rect x="68%" y="5%" width="26%" height="35%" rx="2" fill="#E6D5BE" opacity="0.5"/>
-          <rect x="5%" y="50%" width="20%" height="25%" rx="2" fill="#E6D5BE" opacity="0.5"/>
-          <rect x="68%" y="50%" width="26%" height="25%" rx="2" fill="#E6D5BE" opacity="0.5"/>
-          <rect x="35%" y="30%" width="24%" height="30%" rx="2" fill="#E6D5BE" opacity="0.5"/>
-        </svg>
-                    <div class="pin" style="left:38%;top:42%">
-                        <div class="pin-label active" style="position:relative">
-                            <span class="pin-ring"></span>Don Memo
-                        </div>
-                        <svg width="26" height="30" viewBox="0 0 26 30"><path d="M13 0C6.4 0 1 5.4 1 12c0 7.2 10.2 17.1 11.4 18.2.3.3.9.3 1.2 0C14.8 29.1 25 19.2 25 12 25 5.4 19.6 0 13 0z" fill="#3D2B1F"/><circle cx="13" cy="12" r="5" fill="#FBF7F0"/></svg>
-                    </div>
-                    <div class="pin" style="left:62%;top:28%">
-                        <div class="pin-label inactive">La Señora Lupita</div>
-                        <svg width="20" height="24" viewBox="0 0 26 30"><path d="M13 0C6.4 0 1 5.4 1 12c0 7.2 10.2 17.1 11.4 18.2.3.3.9.3 1.2 0C14.8 29.1 25 19.2 25 12 25 5.4 19.6 0 13 0z" fill="#C7B299"/><circle cx="13" cy="12" r="5" fill="#FBF7F0"/></svg>
-                    </div>
-                    <div class="pin" style="left:55%;top:60%">
-                        <div class="pin-label inactive">El Tamalero</div>
-                        <svg width="20" height="24" viewBox="0 0 26 30"><path d="M13 0C6.4 0 1 5.4 1 12c0 7.2 10.2 17.1 11.4 18.2.3.3.3.9.3 1.2 0C14.8 29.1 25 19.2 25 12 25 5.4 19.6 0 13 0z" fill="#C7B299"/><circle cx="13" cy="12" r="5" fill="#FBF7F0"/></svg>
-                    </div>
-                    <div class="pin" style="left:24%;top:64%">
-                        <div class="pin-label inactive">Doña Carmen</div>
-                        <svg width="20" height="24" viewBox="0 0 26 30"><path d="M13 0C6.4 0 1 5.4 1 12c0 7.2 10.2 17.1 11.4 18.2.3.3.9.3 1.2 0C14.8 29.1 25 19.2 25 12 25 5.4 19.6 0 13 0z" fill="#C7B299"/><circle cx="13" cy="12" r="5" fill="#FBF7F0"/></svg>
-                    </div>
+                    <defs>
+                        <pattern id="grid2" width="40" height="40" patternUnits="userSpaceOnUse">
+                            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#E6D5BE" stroke-width="0.8"/>
+                        </pattern>
+                    </defs>
+                    <rect width="100%" height="100%" fill="url(#grid2)"/>
+                    <line x1="0" y1="45%" x2="100%" y2="45%" stroke="#D8C3A5" stroke-width="8" opacity="0.6"/>
+                    <line x1="0" y1="70%" x2="100%" y2="70%" stroke="#D8C3A5" stroke-width="5" opacity="0.4"/>
+                    <line x1="30%" y1="0" x2="30%" y2="100%" stroke="#D8C3A5" stroke-width="8" opacity="0.6"/>
+                    <line x1="65%" y1="0" x2="65%" y2="100%" stroke="#D8C3A5" stroke-width="5" opacity="0.4"/>
+                    <rect x="5%" y="5%" width="22%" height="35%" rx="2" fill="#E6D5BE" opacity="0.5"/>
+                    <rect x="35%" y="5%" width="24%" height="20%" rx="2" fill="#E6D5BE" opacity="0.5"/>
+                    <rect x="68%" y="5%" width="26%" height="35%" rx="2" fill="#E6D5BE" opacity="0.5"/>
+                    <rect x="5%" y="50%" width="20%" height="25%" rx="2" fill="#E6D5BE" opacity="0.5"/>
+                    <rect x="68%" y="50%" width="26%" height="25%" rx="2" fill="#E6D5BE" opacity="0.5"/>
+                    <rect x="35%" y="30%" width="24%" height="30%" rx="2" fill="#E6D5BE" opacity="0.5"/>
+                </svg>
+
+                    <!-- Los pines dinámicos se inyectarán aquí mediante JS -->
+
                     <div class="map-controls">
                         <button class="map-btn">+</button>
                         <button class="map-btn">−</button>
                     </div>
                     <div class="map-legend">
                         <div class="legend-row">
-                            <div class="dot" style="background:#3D2B1F"></div> Activo ahora</div>
+                            <div class="dot" style="background:#3D2B1F"></div> Activo ahora
+                        </div>
                         <div class="legend-row">
-                            <div class="dot" style="background:#C7B299"></div> Fuera de ruta</div>
+                            <div class="dot" style="background:#C7B299"></div> Fuera de ruta
+                        </div>
                     </div>
                 </div>
 
@@ -346,98 +332,21 @@
                     <div class="search-row">
                         <div class="search-box">
                             <svg width="16" height="16" style="color:var(--mid)"><use href="#i-search"/></svg>
-                            <input type="text" placeholder="Buscar tamalero..." />
+                            <input type="text" id="search-input" placeholder="Buscar tamalero..." autocomplete="off" />
                         </div>
                         <button class="filter-btn">
-            <svg width="16" height="16" style="color:var(--mid)"><use href="#i-filter"/></svg>
-          </button>
+                        <svg width="16" height="16" style="color:var(--mid)"><use href="#i-filter"/></svg>
+                    </button>
                     </div>
                     <!-- Pills -->
                     <div class="pills">
-                        <button class="pill active" onclick="setPill(this)">todos</button>
-                        <button class="pill" onclick="setPill(this)">activos</button>
-                        <button class="pill" onclick="setPill(this)">cerca de mí</button>
-                        <button class="pill" onclick="setPill(this)">mejor valorados</button>
+                        <button class="pill active" data-filter="todos" onclick="setPill(this)">todos</button>
+                        <button class="pill" data-filter="activos" onclick="setPill(this)">activos</button>
+                        <button class="pill" data-filter="cerca" onclick="setPill(this)">cerca de mí</button>
+                        <button class="pill" data-filter="mejor" onclick="setPill(this)">mejor valorados</button>
                     </div>
-                    <!-- Vendor cards -->
-                    <div class="vendors">
-                        <div class="vendor-card">
-                            <div class="vendor-top">
-                                <div>
-                                    <div class="vendor-name">Don Memo <span class="status-badge">Activo</span></div>
-                                    <div class="vendor-spec">Tamales verdes y rojos</div>
-                                </div>
-                                <div class="vendor-dist">150 m</div>
-                            </div>
-                            <div class="vendor-bottom">
-                                <div class="vendor-time">
-                                    <svg width="12" height="12"><use href="#i-clock"/></svg> 6:00 – 10:00 am
-                                </div>
-                                <div class="vendor-rating">
-                                    <svg width="12" height="12"><use href="#i-star"/></svg>
-                                    <span class="rating-n">4.9</span>
-                                    <span class="rating-c">(48)</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="vendor-card">
-                            <div class="vendor-top">
-                                <div>
-                                    <div class="vendor-name">La Señora Lupita <span class="status-badge">Activo</span></div>
-                                    <div class="vendor-spec">Tamales oaxaqueños</div>
-                                </div>
-                                <div class="vendor-dist">320 m</div>
-                            </div>
-                            <div class="vendor-bottom">
-                                <div class="vendor-time">
-                                    <svg width="12" height="12"><use href="#i-clock"/></svg> 7:00 – 11:00 am
-                                </div>
-                                <div class="vendor-rating">
-                                    <svg width="12" height="12"><use href="#i-star"/></svg>
-                                    <span class="rating-n">4.8</span>
-                                    <span class="rating-c">(33)</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="vendor-card">
-                            <div class="vendor-top">
-                                <div>
-                                    <div class="vendor-name">El Tamalero</div>
-                                    <div class="vendor-spec">Tamales de rajas y elote</div>
-                                </div>
-                                <div class="vendor-dist">500 m</div>
-                            </div>
-                            <div class="vendor-bottom">
-                                <div class="vendor-time">
-                                    <svg width="12" height="12"><use href="#i-clock"/></svg> 6:30 – 9:30 am
-                                </div>
-                                <div class="vendor-rating">
-                                    <svg width="12" height="12"><use href="#i-star"/></svg>
-                                    <span class="rating-n">4.7</span>
-                                    <span class="rating-c">(27)</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="vendor-card">
-                            <div class="vendor-top">
-                                <div>
-                                    <div class="vendor-name">Doña Carmen</div>
-                                    <div class="vendor-spec">Tamales dulces y mole</div>
-                                </div>
-                                <div class="vendor-dist">680 m</div>
-                            </div>
-                            <div class="vendor-bottom">
-                                <div class="vendor-time">
-                                    <svg width="12" height="12"><use href="#i-clock"/></svg> 7:30 – 10:30 am
-                                </div>
-                                <div class="vendor-rating">
-                                    <svg width="12" height="12"><use href="#i-star"/></svg>
-                                    <span class="rating-n">4.6</span>
-                                    <span class="rating-c">(21)</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <!-- Vendor cards (Dinámico) -->
+                    <div class="vendors" id="vendors"></div>
                 </div>
             </div>
         </div>
