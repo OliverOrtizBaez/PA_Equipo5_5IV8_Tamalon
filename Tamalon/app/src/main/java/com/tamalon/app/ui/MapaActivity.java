@@ -60,8 +60,8 @@ import retrofit2.Response;
 public class MapaActivity extends AppCompatActivity {
     private static final String TAG = "MapaActivity";
     private static final int PERM_LOCATION = 1001;
-    private static final long RADIO_METROS = 3000L;
-    private static final double LIMITE_MAPA_METROS = 6000.0;
+    private static final long RADIO_METROS = 500L;
+    private static final double LIMITE_MAPA_METROS = 800.0;
 
     private static boolean loggedUbicacionMia = false;
     private static boolean loggedFueraDeRuta = false;
@@ -276,9 +276,9 @@ public class MapaActivity extends AppCompatActivity {
             mapView.setTileSource(TileSourceFactory.MAPNIK);
             mapView.setMultiTouchControls(true);
             mapView.setBuiltInZoomControls(false);
-            mapView.setMinZoomLevel(14.0);
-            mapView.setMaxZoomLevel(19.0);
-            mapView.getController().setZoom(16.0);
+            mapView.setMinZoomLevel(17.0);
+            mapView.setMaxZoomLevel(20.0);
+            mapView.getController().setZoom(16.5);
             mapContainer.removeAllViews();
             mapContainer.addView(mapView, new FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
@@ -383,7 +383,7 @@ public class MapaActivity extends AppCompatActivity {
         circuloBusqueda.setPoints(Polygon.pointsAsCircle(punto, RADIO_METROS));
 
         if (!centroInicialEstablecido) {
-            mapView.getController().setZoom(16.0);
+            mapView.getController().setZoom(15.5);
             mapView.getController().setCenter(punto);
             limitarMapaAlrededor(location.getLatitude(), location.getLongitude());
             centroInicialEstablecido = true;
@@ -477,11 +477,36 @@ public class MapaActivity extends AppCompatActivity {
         if (mapView == null || isFinishing()) return;
         if (vendedores == null) vendedores = new ArrayList<>();
 
+
         Set<Integer> idsVisibles = new HashSet<>();
+
         for (VendedorCercanoDto vendedor : vendedores) {
+
+            // No mostrar nuestra propia ubicación como vendedor cercano
             if (vendedor.idUsuario == usuarioId) continue;
+
+            // Calcular la distancia real entre el usuario y el vendedor
+            float[] distancia = new float[1];
+
+            Location.distanceBetween(
+                    latCliente,
+                    lonCliente,
+                    vendedor.latitud,
+                    vendedor.longitud,
+                    distancia
+            );
+
+            // Excluir vendedores que estén fuera de los 500 metros
+            if (distancia[0] > RADIO_METROS) continue;
+
+            // Registrar únicamente los vendedores dentro del radio
             idsVisibles.add(vendedor.idUsuario);
-            GeoPoint punto = new GeoPoint(vendedor.latitud, vendedor.longitud);
+
+            GeoPoint punto = new GeoPoint(
+                    vendedor.latitud,
+                    vendedor.longitud
+            );
+
             Marker marker = marcadoresVendedores.get(vendedor.idUsuario);
             if (marker == null) {
                 marker = new Marker(mapView);
