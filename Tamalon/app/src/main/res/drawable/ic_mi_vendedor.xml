@@ -1,0 +1,44 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="40dp"
+    android:height="40dp"
+    android:viewportWidth="40"
+    android:viewportHeight="40">
+
+    <!-- Sombra proyectada en el suelo -->
+    <path
+        android:pathData="M20,35.5 m-7.5,0 a7.5,2.4 0,1 0,15 0 a7.5,2.4 0,1 0,-15 0"
+        android:fillColor="#38262522" />
+
+    <!-- Halo exterior verde de transmisión en tiempo real -->
+    <path
+        android:pathData="M20,16.5 m-13.5,0 a13.5,13.5 0,1 0,27 0 a13.5,13.5 0,1 0,-27 0"
+        android:fillColor="#24168D55" />
+
+    <!-- Base 3D inferior (profundidad del botón/pin) -->
+    <path
+        android:pathData="M20,18.4 m-9.8,0 a9.8,9.8 0,1 0,19.6 0 a9.8,9.8 0,1 0,-19.6 0"
+        android:fillColor="#0D5C37" />
+
+    <!-- Aro blanco elevado -->
+    <path
+        android:pathData="M20,16.5 m-9.8,0 a9.8,9.8 0,1 0,19.6 0 a9.8,9.8 0,1 0,-19.6 0"
+        android:fillColor="#FFFDF9" />
+
+    <!-- Cuerpo principal verde esmeralda (vendedor en ruta) -->
+    <path
+        android:pathData="M20,16.5 m-7.4,0 a7.4,7.4 0,1 0,14.8 0 a7.4,7.4 0,1 0,-14.8 0"
+        android:fillColor="#168D55" />
+
+    <!-- Sombra curva inferior para volumen 3D -->
+    <path
+        android:pathData="M14.2,20.8 A7.4,7.4 0,0 0,26.2 13.5 A7.4,7.4 0,0 1,14.2 20.8 Z"
+        android:fillColor="#107043" />
+
+    <!-- Flecha direccional blanca con leve sombra inferior -->
+    <path
+        android:pathData="M20,12 L24.5,21 L20,19.1 L15.5,21 Z"
+        android:fillColor="#0D5C37" />
+    <path
+        android:pathData="M20,11.2 L24.5,20.2 L20,18.3 L15.5,20.2 Z"
+        android:fillColor="#FFFDF9" />
+</vector>

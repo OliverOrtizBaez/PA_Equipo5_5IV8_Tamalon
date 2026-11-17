@@ -338,12 +338,39 @@ public class MapaActivity extends AppCompatActivity {
         GeoPoint punto = new GeoPoint(location.getLatitude(), location.getLongitude());
         if (mapView == null) return;
 
+
         if (marcadorUsuario == null) {
             marcadorUsuario = new Marker(mapView);
             marcadorUsuario.setTitle("Tu ubicación");
-            marcadorUsuario.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
+            marcadorUsuario.setAnchor(
+                    Marker.ANCHOR_CENTER,
+                    Marker.ANCHOR_BOTTOM
+            );
+
             mapView.getOverlays().add(marcadorUsuario);
         }
+
+// Seleccionar icono según el tipo de usuario
+        if ("vendedor".equalsIgnoreCase(rol)) {
+
+            marcadorUsuario.setIcon(
+                    ContextCompat.getDrawable(
+                            this,
+                            R.drawable.ic_mi_vendedor
+                    )
+            );
+
+        } else {
+
+            marcadorUsuario.setIcon(
+                    ContextCompat.getDrawable(
+                            this,
+                            R.drawable.ic_mi_cliente
+                    )
+            );
+        }
+
+// Actualizar posición GPS
         marcadorUsuario.setPosition(punto);
 
         if (circuloBusqueda == null) {
@@ -459,6 +486,12 @@ public class MapaActivity extends AppCompatActivity {
             if (marker == null) {
                 marker = new Marker(mapView);
                 marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
+                marker.setIcon(
+                        ContextCompat.getDrawable(
+                                this,
+                                R.drawable.ic_vendedor_mapa
+                        )
+                );
                 final VendedorCercanoDto vFinal = vendedor;
                 marker.setOnMarkerClickListener((m, map) -> {
                     mostrarTarjetaVendedor(vFinal);

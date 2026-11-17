@@ -1,0 +1,41 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="36dp"
+    android:height="36dp"
+    android:viewportWidth="36"
+    android:viewportHeight="36">
+
+    <!-- Sombra suave en el suelo para efecto 3D -->
+    <path
+        android:pathData="M18,30.5 m-6.5,0 a6.5,2.2 0,1 0,13 0 a6.5,2.2 0,1 0,-13 0"
+        android:fillColor="#33262522" />
+
+    <!-- Halo exterior de ubicación activa -->
+    <path
+        android:pathData="M18,17 m-11,0 a11,11 0,1 0,22 0 a11,11 0,1 0,-22 0"
+        android:fillColor="#26287EB7" />
+
+    <!-- Base 3D inferior / borde de profundidad -->
+    <path
+        android:pathData="M18,18.2 m-8.2,0 a8.2,8.2 0,1 0,16.4 0 a8.2,8.2 0,1 0,-16.4 0"
+        android:fillColor="#1A5278" />
+
+    <!-- Aro blanco elevado -->
+    <path
+        android:pathData="M18,17 m-8.2,0 a8.2,8.2 0,1 0,16.4 0 a8.2,8.2 0,1 0,-16.4 0"
+        android:fillColor="#FFFDF9" />
+
+    <!-- Esfera azul principal (ubicación del cliente) -->
+    <path
+        android:pathData="M18,17 m-5.8,0 a5.8,5.8 0,1 0,11.6 0 a5.8,5.8 0,1 0,-11.6 0"
+        android:fillColor="#287EB7" />
+
+    <!-- Sombra interna inferior derecha de la esfera -->
+    <path
+        android:pathData="M13.5,20.5 A5.8,5.8 0,0 0,22.8 14.5 A5.8,5.8 0,0 1,13.5 20.5 Z"
+        android:fillColor="#1C608F" />
+
+    <!-- Reflejo superior izquierdo (brillo 3D) -->
+    <path
+        android:pathData="M14.4,14.8 A3.8,2.2 -30,1 0,18.2 12.6 A3.8,2.2 -30,1 0,14.4 14.8 Z"
+        android:fillColor="#66FFFFFF" />
+</vector>
