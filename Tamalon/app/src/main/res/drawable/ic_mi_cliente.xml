@@ -1,0 +1,44 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="36dp"
+    android:height="36dp"
+    android:viewportWidth="36"
+    android:viewportHeight="36">
+
+    <!-- Sombra suave en el suelo para efecto 3D -->
+    <path
+        android:pathData="M18,30.5 m-6.5,0 a6.5,2.2 0,1 0,13 0 a6.5,2.2 0,1 0,-13 0"
+        android:fillColor="@color/tamalon_ink"
+        android:fillAlpha="0.20" />
+
+    <!-- Halo exterior de ubicación activa -->
+    <path
+        android:pathData="M18,17 m-11,0 a11,11 0,1 0,22 0 a11,11 0,1 0,-22 0"
+        android:fillColor="@color/tamalon_sand_strong"
+        android:fillAlpha="0.45" />
+
+    <!-- Base 3D inferior / borde de profundidad -->
+    <path
+        android:pathData="M18,18.2 m-8.2,0 a8.2,8.2 0,1 0,16.4 0 a8.2,8.2 0,1 0,-16.4 0"
+        android:fillColor="@color/tamalon_field_text" />
+
+    <!-- Aro blanco elevado -->
+    <path
+        android:pathData="M18,17 m-8.2,0 a8.2,8.2 0,1 0,16.4 0 a8.2,8.2 0,1 0,-16.4 0"
+        android:fillColor="@color/tamalon_surface_strong" />
+
+    <!-- Esfera azul principal (ubicación del cliente) -->
+    <path
+        android:pathData="M18,17 m-5.8,0 a5.8,5.8 0,1 0,11.6 0 a5.8,5.8 0,1 0,-11.6 0"
+        android:fillColor="@color/tamalon_sand_strong" />
+
+    <!-- Sombra interna inferior derecha de la esfera -->
+    <path
+        android:pathData="M18,17 m-2.6,0 a2.6,2.6 0,1 0,5.2 0 a2.6,2.6 0,1 0,-5.2 0"
+        android:fillColor="@color/tamalon_field_text" />
+
+    <!-- Reflejo superior izquierdo (brillo 3D) -->
+    <path
+        android:pathData="M14.4,14.8 A3.8,2.2 -30,1 0,18.2 12.6 A3.8,2.2 -30,1 0,14.4 14.8 Z"
+        android:fillColor="@color/tamalon_white"
+        android:fillAlpha="0.65" />
+</vector>

@@ -14,7 +14,7 @@ public final class AppConfig {
     private AppConfig() {}
 
     // --- Mapa ---
-    public static final float RADIO_KM                    = 3.0f;
+    public static final float RADIO_KM                    = 0.5f;
     public static final long  INTERVALO_ACTUALIZACION_MS  = 15_000L;
     public static final long  TIMEOUT_FUERA_DE_RUTA_MS    = 60_000L;
 
