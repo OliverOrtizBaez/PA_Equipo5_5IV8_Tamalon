@@ -15,6 +15,9 @@ public class VendedorCercanoDto {
     @SerializedName("rol")
     public String rol;
 
+    @SerializedName("plan")
+    public String plan;
+
     @SerializedName("latitud")
     public double latitud;
 

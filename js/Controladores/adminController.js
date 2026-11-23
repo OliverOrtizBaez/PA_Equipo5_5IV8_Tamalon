@@ -17,17 +17,19 @@ const parseId = (valor) => {
 const parsePagina = (valor) => entero(valor ?? '1') || 1;
 
 const crearAdministrador = asyncHandler(async (req, res) => {
-  const cuenta = await crearCuenta(req.body, C.ROLES.ADMIN);
+  const cuenta = await crearCuenta(req.body, C.TIPOS.ADMIN);
   res.status(201).json({ mensaje: 'Cuenta de administrador creada', usuario: cuenta });
 });
 
 const consultarSuscripciones = asyncHandler(async (req, res) => {
-  const [[f]] = await pool.query(
-    `SELECT SUM(rol = ?) AS vendedores, SUM(rol = ?) AS clientes FROM usuarios`,
-    [C.ROLES.VENDEDOR_PREMIUM, C.ROLES.CLIENTE_PREMIUM] 
+  const [[vendedores]] = await pool.query(
+    "SELECT COUNT(*) AS total FROM vendedor WHERE plan = 'Premium'"
   );
-  const vendedoresPremium = Number(f.vendedores || 0);
-  const clientesPremium = Number(f.clientes || 0);
+  const [[clientes]] = await pool.query(
+    "SELECT COUNT(*) AS total FROM cliente WHERE plan = 'Premium'"
+  );
+  const vendedoresPremium = Number(vendedores.total || 0);
+  const clientesPremium = Number(clientes.total || 0);
   res.json({ vendedoresPremium, clientesPremium, totalSuscripciones: vendedoresPremium + clientesPremium });
 });
 
@@ -190,8 +192,8 @@ const buscarUsuarios = asyncHandler(async (req, res) => {
     [patron, patron]
   );
   const [usuarios] = await pool.query(
-    `SELECT id_usuario, nombre_completo, correo, rol, estado_cuenta
-       FROM usuarios WHERE nombre_completo LIKE ? OR correo LIKE ?
+    `SELECT id_usuario, nombre_completo, correo, rol, tipo, plan, estado_cuenta
+       FROM vw_usuario WHERE nombre_completo LIKE ? OR correo LIKE ?
       ORDER BY nombre_completo ASC, id_usuario ASC LIMIT ? OFFSET ?`,
     [patron, patron, C.POR_PAGINA, (pagina - 1) * C.POR_PAGINA]
   );
@@ -206,11 +208,24 @@ const buscarUsuarios = asyncHandler(async (req, res) => {
 
 async function cuentaBloqueada(conn, id) {
   const [[u]] = await conn.query(
-    'SELECT id_usuario, rol, estado_cuenta FROM usuarios WHERE id_usuario = ? FOR UPDATE',
+    'SELECT id_usuario, tipo, estado_cuenta FROM usuarios WHERE id_usuario = ? FOR UPDATE',
     [id]
   );
   if (!u) throw new ErrorHttp(404, MSG.CUENTA_NO_ENCONTRADA);
-  if (u.rol === C.ROLES.ADMIN) throw new ErrorHttp(403, MSG.OPERACION_NO_PERMITIDA); 
+  if (u.tipo === C.TIPOS.ADMIN) throw new ErrorHttp(403, MSG.OPERACION_NO_PERMITIDA);
+  if (u.tipo === C.TIPOS.VENDEDOR) {
+    const [[filaPlan]] = await conn.query(
+      'SELECT plan FROM vendedor WHERE id_vendedor = ? FOR UPDATE',
+      [id]
+    );
+    u.plan = filaPlan?.plan || null;
+  } else if (u.tipo === C.TIPOS.CLIENTE) {
+    const [[filaPlan]] = await conn.query(
+      'SELECT plan FROM cliente WHERE id_cliente = ? FOR UPDATE',
+      [id]
+    );
+    u.plan = filaPlan?.plan || null;
+  }
   return u;
 }
 
@@ -225,23 +240,23 @@ const cambiarRol = asyncHandler(async (req, res) => {
     const u = await cuentaBloqueada(conn, id);
     let nuevo;
     if (accion === 'Premium') {
-      if (!S.esGratuito(u.rol)) throw new ErrorHttp(409, 'La cuenta ya es Premium');
+      if (!S.esGratuito(u)) throw new ErrorHttp(409, 'La cuenta ya es Premium');
       nuevo = await S.activarPremium(conn, u, { fechaCorte: S.calcularFechaCorte(), renovacion: false });
     } else {
-      if (!S.esPremium(u.rol)) throw new ErrorHttp(409, 'La cuenta ya es Gratuita');
+      if (!S.esPremium(u)) throw new ErrorHttp(409, 'La cuenta ya es Gratuita');
       nuevo = await S.degradarAGratuito(conn, u); 
     }
     await conn.query(
-      'INSERT INTO historial_rol (id_admin, id_usuario, rol_anterior, rol_nuevo, fech_hrs) VALUES (?, ?, ?, ?, ?)',
-      [req.usuario.id, id, u.rol, nuevo, new Date()]
+      'INSERT INTO historial_plan (id_admin, id_usuario, plan_anterior, plan_nuevo, fech_hrs) VALUES (?, ?, ?, ?, ?)',
+      [req.usuario.id, id, u.plan, accion, new Date()]
     );
     return nuevo;
   });
 
   res.json({ mensaje: 'Rol actualizado correctamente', rol: rolNuevo });
 });
-async function marcarFueraDeRutaSiVendedor(conn, rol, id) {
-  if (S.esVendedor(rol)) { // RF22.6
+async function marcarFueraDeRutaSiVendedor(conn, tipo, id) {
+  if (tipo === C.TIPOS.VENDEDOR) { // RF22.6
     await conn.query("UPDATE ubi_vendedor SET disponibilidad = 'Fuera de ruta' WHERE id_vendedor = ?", [id]);
   }
 }
@@ -255,7 +270,7 @@ const suspenderIndefinidamente = asyncHandler(async (req, res) => {
     }
     await conn.query('UPDATE usuarios SET estado_cuenta = ?, fin_suspension = NULL WHERE id_usuario = ?',
       [C.ESTADOS_CUENTA.SUSPENDIDA_INDEF, id]);
-    await marcarFueraDeRutaSiVendedor(conn, u.rol, id);
+    await marcarFueraDeRutaSiVendedor(conn, u.tipo, id);
   });
   res.json({ mensaje: 'Usuario suspendido indefinidamente' });
 });
@@ -274,7 +289,7 @@ const suspenderTemporalmente = asyncHandler(async (req, res) => {
     }
     await conn.query('UPDATE usuarios SET estado_cuenta = ?, fin_suspension = ? WHERE id_usuario = ?',
       [C.ESTADOS_CUENTA.SUSPENDIDA_TEMP, fin, id]);
-    await marcarFueraDeRutaSiVendedor(conn, u.rol, id);
+    await marcarFueraDeRutaSiVendedor(conn, u.tipo, id);
   });
   res.json({ mensaje: `Usuario suspendido por ${dias} día(s)`, fin_suspension: fin.toISOString() });
 });
@@ -296,7 +311,7 @@ const consultarReportes = asyncHandler(async (req, res) => {
   const [[{ total }]] = await pool.query('SELECT COUNT(*) AS total FROM reporte');
   const [reportes] = await pool.query(
     `SELECT r.id_reporte,
-            CASE WHEN e.rol LIKE 'Vendedor%' THEN 'Vendedor' ELSE 'Cliente' END AS tipo_emisor,
+            e.tipo AS tipo_emisor,
             r.id_emisor, r.id_reportado, r.fech_hrs, r.motivo
        FROM reporte r JOIN usuarios e ON e.id_usuario = r.id_emisor
       ORDER BY r.fech_hrs DESC, r.id_reporte DESC LIMIT ? OFFSET ?`,

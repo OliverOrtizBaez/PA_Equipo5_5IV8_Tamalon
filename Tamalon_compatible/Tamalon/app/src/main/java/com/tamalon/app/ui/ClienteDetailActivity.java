@@ -7,8 +7,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import com.tamalon.app.R;
-import com.tamalon.app.data.local.AppDatabase;
 import com.tamalon.app.model.Usuario;
+import com.tamalon.app.repository.UsuarioRepository;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -26,7 +26,7 @@ public class ClienteDetailActivity extends AppCompatActivity {
         report.setOnClickListener(v -> { Intent i = new Intent(this, ReporteActivity.class); i.putExtra("reportado_id", clienteId); i.putExtra("reportado_rol", "cliente"); startActivity(i); });
         back.setOnClickListener(v -> finish());
         if (clienteId > 0) executor.execute(() -> {
-            Usuario u = AppDatabase.getInstance(this).usuarioDao().obtenerPorId(clienteId);
+            Usuario u = new UsuarioRepository(this).obtenerPorId(clienteId);
             runOnUiThread(() -> {
                 if (u == null) { Toast.makeText(this, "No se encontró este perfil", Toast.LENGTH_SHORT).show(); return; }
                 ((TextView)findViewById(R.id.client_name)).setText(u.nombreCompleto);

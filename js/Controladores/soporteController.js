@@ -4,7 +4,7 @@ const { ErrorHttp, ErrorValidacion, asyncHandler } = require('../utils/errores')
 const { entero } = require('../utils/validaciones');
 
 const CATEGORIAS_TICKET = ['queja', 'peticion', 'sugerencia', 'tecnico', 'otro'];
-const rolesSociales = [C.ROLES.VENDEDOR_GRATUITO, C.ROLES.VENDEDOR_PREMIUM, C.ROLES.CLIENTE_GRATUITO, C.ROLES.CLIENTE_PREMIUM];
+const tiposSociales = [C.TIPOS.VENDEDOR, C.TIPOS.CLIENTE];
 
 const crearReporte = asyncHandler(async (req, res) => {
   const { id_reportado, motivo } = req.body || {};
@@ -19,17 +19,15 @@ const crearReporte = asyncHandler(async (req, res) => {
   if (idReportado === req.usuario.id) throw new ErrorHttp(400, 'No puedes reportar tu propia cuenta');
 
   const [usuarios] = await pool.query(
-    'SELECT id_usuario, rol FROM usuarios WHERE id_usuario = ? LIMIT 1',
+    'SELECT id_usuario, tipo FROM usuarios WHERE id_usuario = ? LIMIT 1',
     [idReportado]
   );
   const reportado = usuarios[0];
   if (!reportado) throw new ErrorHttp(404, 'La cuenta que intentas reportar no existe');
-  if (!rolesSociales.includes(req.usuario.rol) || !rolesSociales.includes(reportado.rol)) {
+  if (!tiposSociales.includes(req.usuario.tipo) || !tiposSociales.includes(reportado.tipo)) {
     throw new ErrorHttp(400, 'Solo puedes reportar entre cuentas de cliente y vendedor');
   }
-  const esVendedorEmisor = req.usuario.rol.startsWith('Vendedor');
-  const esVendedorReportado = reportado.rol.startsWith('Vendedor');
-  if (esVendedorEmisor === esVendedorReportado) {
+  if (req.usuario.tipo === reportado.tipo) {
     throw new ErrorHttp(400, 'Solo puedes reportar a usuarios del rol opuesto');
   }
 
@@ -67,9 +65,9 @@ const crearSolicitudSoporte = asyncHandler(async (req, res) => {
   if (errores.length) throw new ErrorValidacion(errores);
 
   const [resultado] = await pool.query(
-    `INSERT INTO solicitudes_soporte (id_usuario, rol_emisor, categoria, asunto, descripcion)
-     VALUES (?, ?, ?, ?, ?)`,
-    [req.usuario.id, req.usuario.rol, categoria, asunto.trim(), descripcion.trim()]
+    `INSERT INTO solicitudes_soporte (id_usuario, categoria, asunto, descripcion)
+     VALUES (?, ?, ?, ?)`,
+    [req.usuario.id, categoria, asunto.trim(), descripcion.trim()]
   );
   res.status(201).json({ mensaje: 'Solicitud de soporte enviada', id_solicitud: resultado.insertId });
 });

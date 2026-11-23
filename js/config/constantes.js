@@ -7,6 +7,20 @@ const ROLES = {
   ADMIN: 'Administrador',
 };
 
+const TIPOS = {
+  VENDEDOR: 'Vendedor',
+  CLIENTE: 'Cliente',
+  ADMIN: 'Administrador',
+};
+
+const PLANES = {
+  GRATUITO: 'Gratuito',
+  PREMIUM: 'Premium',
+};
+
+const componerRol = (tipo, plan) =>
+  tipo === TIPOS.ADMIN ? 'Administrador' : `${tipo} ${plan}`;
+
 const ESTADOS_CUENTA = {
   ACTIVA: 'Activa',
   SUSPENDIDA_INDEF: 'Suspendida indefinidamente',
@@ -15,6 +29,9 @@ const ESTADOS_CUENTA = {
 
 module.exports = {
   ROLES,
+  TIPOS,
+  PLANES,
+  componerRol,
   ESTADOS_CUENTA,
   ZONA_NEGOCIO: 'America/Mexico_City',       // ZH-N
   OFFSET_ZHN: '-06:00',                        // sin horario de verano

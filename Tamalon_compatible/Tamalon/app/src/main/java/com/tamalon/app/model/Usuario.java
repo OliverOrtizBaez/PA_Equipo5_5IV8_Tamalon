@@ -3,6 +3,7 @@ package com.tamalon.app.model;
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
 import androidx.room.ColumnInfo;
+import androidx.room.Ignore;
 import androidx.annotation.NonNull;
 
 /**
@@ -46,24 +47,24 @@ public class Usuario {
     @ColumnInfo(name = "fecha_registro")
     public long fechaRegistro;     // epoch millis
 
-    @ColumnInfo(name = "plan")
-    public String plan;            // "gratuito" | "premium"
+    @Ignore
+    public String plan;            // "gratuito" | "premium" (en tabla cliente/vendedor)
 
     // Integración futura: supabase_uid se poblará al sincronizar con el backend
     @ColumnInfo(name = "supabase_uid")
     public String supabaseUid;
 
-    // Ubicación y disponibilidad del vendedor. Las coordenadas son nulas hasta compartir ubicación.
-    @ColumnInfo(name = "ubicacion_latitud")
+    // Ubicación y disponibilidad del vendedor (en tabla vendedor)
+    @Ignore
     public Double ubicacionLatitud;
 
-    @ColumnInfo(name = "ubicacion_longitud")
+    @Ignore
     public Double ubicacionLongitud;
 
-    @ColumnInfo(name = "disponible_en_ruta", defaultValue = "0")
+    @Ignore
     public boolean disponibleEnRuta;
 
-    @ColumnInfo(name = "ultima_ubicacion", defaultValue = "0")
+    @Ignore
     public long ultimaUbicacion;
 
     public Usuario() {}

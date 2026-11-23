@@ -8,8 +8,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import com.tamalon.app.R;
-import com.tamalon.app.data.local.AppDatabase;
 import com.tamalon.app.model.Usuario;
+import com.tamalon.app.repository.UsuarioRepository;
 import com.tamalon.app.service.AutenticacionService;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -38,7 +38,7 @@ public class VendedorDetailActivity extends AppCompatActivity {
             @Override public void onError(String r) {}
         });
         if (vendedorId > 0) executor.execute(() -> {
-            Usuario u = AppDatabase.getInstance(this).usuarioDao().obtenerPorId(vendedorId);
+            Usuario u = new UsuarioRepository(this).obtenerPorId(vendedorId);
             runOnUiThread(() -> {
                 if (u == null) { Toast.makeText(this, "No se encontró este vendedor", Toast.LENGTH_SHORT).show(); return; }
                 ((TextView)findViewById(R.id.vendor_name)).setText(u.nombreCompleto);

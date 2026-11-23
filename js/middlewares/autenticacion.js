@@ -29,8 +29,9 @@ const verificarSesion = asyncHandler(async (req, res, next) => {
 
   const [filas] = await pool.query(
     `SELECT s.id_sesion, s.fecha_expiracion,
-            u.id_usuario, u.nombre_completo, u.correo, u.rol, u.estado_cuenta, u.fin_suspension, u.zona_horaria
-       FROM sesion s JOIN usuarios u ON u.id_usuario = s.id_usuario
+            u.id_usuario, u.nombre_completo, u.correo, u.tipo, u.plan, u.rol,
+            u.estado_cuenta, u.fin_suspension, u.zona_horaria
+       FROM sesion s JOIN vw_usuario u ON u.id_usuario = s.id_usuario
       WHERE s.token = ? LIMIT 1`,
     [hashToken(token)]
   );
@@ -59,6 +60,8 @@ const verificarSesion = asyncHandler(async (req, res, next) => {
     id: f.id_usuario,
     nombre: f.nombre_completo,
     correo: f.correo,
+    tipo: f.tipo,
+    plan: f.plan,
     rol: f.rol,
     estado,
     zonaHoraria: f.zona_horaria,
@@ -74,4 +77,11 @@ const verificarRol = (...rolesPermitidos) => (req, res, next) => {
   next();
 };
 
-module.exports = { verificarSesion, verificarRol, reactivarSiVencio };
+const verificarTipo = (...tiposPermitidos) => (req, res, next) => {
+  if (!req.usuario || !tiposPermitidos.includes(req.usuario.tipo)) {
+    return res.status(403).json({ mensaje: MSG.SIN_PERMISO });
+  }
+  next();
+};
+
+module.exports = { verificarSesion, verificarRol, verificarTipo, reactivarSiVencio };

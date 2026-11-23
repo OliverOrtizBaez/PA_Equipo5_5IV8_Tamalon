@@ -11,12 +11,12 @@ const { crearCuenta } = require('../services/cuentasService');
 const { reactivarSiVencio } = require('../middlewares/autenticacion');
 
 const registrarVendedor = asyncHandler(async (req, res) => {
-  const cuenta = await crearCuenta(req.body, C.ROLES.VENDEDOR_GRATUITO);
+  const cuenta = await crearCuenta(req.body, C.TIPOS.VENDEDOR);
   res.status(201).json({ mensaje: 'Cuenta creada', usuario: cuenta });
 });
 
 const registrarCliente = asyncHandler(async (req, res) => {
-  const cuenta = await crearCuenta(req.body, C.ROLES.CLIENTE_GRATUITO);
+  const cuenta = await crearCuenta(req.body, C.TIPOS.CLIENTE);
   res.status(201).json({ mensaje: 'Cuenta creada', usuario: cuenta });
 });
 
@@ -29,9 +29,12 @@ const login = asyncHandler(async (req, res) => {
   }
 
   const [filas] = await pool.query(
-    `SELECT id_usuario, nombre_completo, correo, telefono, foto_perfil, contrasena, rol, estado_cuenta,
-            zona_horaria, intentos_fallidos, ultimo_intento
-       FROM usuarios WHERE correo = ? LIMIT 1`,
+    `SELECT u.id_usuario, u.nombre_completo, u.correo, u.telefono, u.foto_perfil, u.contrasena,
+            u.tipo, u.plan, u.rol, u.estado_cuenta, u.zona_horaria,
+            COALESCE(ca.intentos_fallidos, 0) AS intentos_fallidos, ca.ultimo_intento
+       FROM vw_usuario u
+       LEFT JOIN control_acceso ca ON ca.id_usuario = u.id_usuario
+      WHERE u.correo = ? LIMIT 1`,
     [normalizarCorreo(correo)]
   );
   const u = filas[0];
@@ -50,12 +53,13 @@ const login = asyncHandler(async (req, res) => {
   if (!(await comparar(contrasena, u.contrasena))) {
     const limiteVentana = sumarMinutos(ahora, -C.VENTANA_INTENTOS_MIN);
     await pool.query(
-      `UPDATE usuarios SET
+      `INSERT INTO control_acceso (id_usuario, intentos_fallidos, inicio_intentos, ultimo_intento)
+       VALUES (?, 1, ?, ?)
+       ON DUPLICATE KEY UPDATE
          intentos_fallidos = IF(inicio_intentos IS NULL OR inicio_intentos < ?, 1, intentos_fallidos + 1),
-         inicio_intentos   = IF(inicio_intentos IS NULL OR inicio_intentos < ?, ?, inicio_intentos),
-         ultimo_intento    = ?
-       WHERE id_usuario = ?`,
-      [limiteVentana, limiteVentana, ahora, ahora, u.id_usuario]
+         inicio_intentos   = IF(inicio_intentos IS NULL OR inicio_intentos < ?, VALUES(inicio_intentos), inicio_intentos),
+         ultimo_intento    = VALUES(ultimo_intento)`,
+      [u.id_usuario, ahora, ahora, limiteVentana, limiteVentana]
     );
     return rechazar();
   }
@@ -73,7 +77,11 @@ const login = asyncHandler(async (req, res) => {
   const token = generarToken();
   const expira = sumarDias(ahora, C.SESION_DIAS);
   await pool.query(
-    'UPDATE usuarios SET intentos_fallidos = 0, inicio_intentos = NULL, ultimo_intento = NULL, zona_horaria = ? WHERE id_usuario = ?',
+    'UPDATE control_acceso SET intentos_fallidos = 0, inicio_intentos = NULL, ultimo_intento = NULL WHERE id_usuario = ?',
+    [u.id_usuario]
+  );
+  await pool.query(
+    'UPDATE usuarios SET zona_horaria = ? WHERE id_usuario = ?',
     [zona, u.id_usuario]
   );
   await pool.query(
@@ -82,7 +90,7 @@ const login = asyncHandler(async (req, res) => {
   );
 
   try {
-    await pool.query('INSERT INTO registro_login (id_usuario, rol, fech_hrs) VALUES (?, ?, ?)', [u.id_usuario, u.rol, ahora]);
+    await pool.query('INSERT INTO registro_login (id_usuario, fech_hrs) VALUES (?, ?)', [u.id_usuario, ahora]);
   } catch (err) {
     console.error('[registro_login] no se pudo guardar el inicio de sesión:', err.message);
   }
@@ -97,6 +105,8 @@ const login = asyncHandler(async (req, res) => {
       telefono: u.telefono,
       foto_perfil: u.foto_perfil,
       rol: u.rol,
+      tipo: u.tipo,
+      plan: u.plan,
       estado_cuenta: estado,
       zona_horaria: zona,
     },

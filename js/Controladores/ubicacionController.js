@@ -4,7 +4,6 @@ const MSG = require('../utils/mensajes');
 const { ErrorHttp, ErrorValidacion, asyncHandler } = require('../utils/errores');
 const { entero } = require('../utils/validaciones');
 
-const ROLES_VENDEDOR = [C.ROLES.VENDEDOR_GRATUITO, C.ROLES.VENDEDOR_PREMIUM];
 const RADIO_MAX_KM = 10;
 
 function numeroQuery(valor) {
@@ -103,7 +102,6 @@ const obtenerCercanos = asyncHandler(async (req, res) => {
   const ahora = new Date();
   const limiteVigencia = new Date(ahora.getTime() - C.UBICACION_VIGENCIA_SEG * 1000);
   const condiciones = [
-    'u.rol IN (?, ?)',
     'u.estado_cuenta = ?',
     'uv.disponibilidad = ?',
     'uv.ultima_actualizacion >= ?',
@@ -111,8 +109,6 @@ const obtenerCercanos = asyncHandler(async (req, res) => {
     caja.condicionLongitud,
   ];
   const parametros = [
-    C.ROLES.VENDEDOR_GRATUITO,
-    C.ROLES.VENDEDOR_PREMIUM,
     C.ESTADOS_CUENTA.ACTIVA,
     'En ruta',
     limiteVigencia,
@@ -149,11 +145,13 @@ const obtenerCercanos = asyncHandler(async (req, res) => {
 
   const [vendedores] = await pool.query(
     `SELECT * FROM (
-       SELECT u.id_usuario, u.nombre_completo, u.foto_perfil, u.rol,
+       SELECT u.id_usuario, u.nombre_completo, u.foto_perfil, v.plan,
+              CONCAT('Vendedor ', v.plan) AS rol,
               uv.latitud, uv.longitud, uv.ultima_actualizacion,
               ST_Distance_Sphere(POINT(?, ?), POINT(uv.longitud, uv.latitud)) AS distancia_m
          FROM ubi_vendedor uv
-         JOIN usuarios u ON u.id_usuario = uv.id_vendedor
+         JOIN vendedor v ON v.id_vendedor = uv.id_vendedor
+         JOIN usuarios u ON u.id_usuario = v.id_vendedor
         WHERE ${condiciones.join(' AND ')}
      ) AS candidatos
       WHERE distancia_m <= ?
@@ -178,14 +176,15 @@ const obtenerUbicacionVendedor = asyncHandler(async (req, res) => {
   const limiteVigencia = new Date(ahora.getTime() - C.UBICACION_VIGENCIA_SEG * 1000);
   const [filas] = await pool.query(
     `SELECT uv.latitud, uv.longitud, uv.ultima_actualizacion
-       FROM usuarios u
+       FROM vendedor v
+       JOIN usuarios u ON u.id_usuario = v.id_vendedor
        LEFT JOIN ubi_vendedor uv
-         ON uv.id_vendedor = u.id_usuario
+         ON uv.id_vendedor = v.id_vendedor
         AND uv.disponibilidad = ?
         AND uv.ultima_actualizacion >= ?
-      WHERE u.id_usuario = ? AND u.rol IN (?, ?) AND u.estado_cuenta = ?
+      WHERE u.id_usuario = ? AND u.estado_cuenta = ?
       LIMIT 1`,
-    ['En ruta', limiteVigencia, idVendedor, ...ROLES_VENDEDOR, C.ESTADOS_CUENTA.ACTIVA]
+    ['En ruta', limiteVigencia, idVendedor, C.ESTADOS_CUENTA.ACTIVA]
   );
   const vendedor = filas[0];
   if (!vendedor) throw new ErrorHttp(404, MSG.VENDEDOR_NO_ENCONTRADO);
@@ -212,8 +211,8 @@ const listarVendedores = asyncHandler(async (req, res) => {
   const offset = (pagina - 1) * limite;
   if (!Number.isSafeInteger(offset)) throw new ErrorValidacion([MSG.FILTRO_UBICACION_INVALIDO]);
 
-  const condiciones = ['u.rol IN (?, ?)', 'u.estado_cuenta = ?'];
-  const parametros = [...ROLES_VENDEDOR, C.ESTADOS_CUENTA.ACTIVA];
+  const condiciones = ['u.estado_cuenta = ?'];
+  const parametros = [C.ESTADOS_CUENTA.ACTIVA];
   if (buscar) {
     condiciones.push("u.nombre_completo LIKE ? ESCAPE '!'");
     parametros.push(buscarLike(buscar));
@@ -222,11 +221,13 @@ const listarVendedores = asyncHandler(async (req, res) => {
   const ahora = new Date();
   const limiteVigencia = new Date(ahora.getTime() - C.UBICACION_VIGENCIA_SEG * 1000);
   const [filas] = await pool.query(
-    `SELECT u.id_usuario, u.nombre_completo, u.foto_perfil, u.rol,
+    `SELECT u.id_usuario, u.nombre_completo, u.foto_perfil, v.plan,
+            CONCAT('Vendedor ', v.plan) AS rol,
             CASE WHEN uv.id_vendedor IS NOT NULL THEN 1 ELSE 0 END AS en_ruta
-       FROM usuarios u
+       FROM vendedor v
+       JOIN usuarios u ON u.id_usuario = v.id_vendedor
        LEFT JOIN ubi_vendedor uv
-         ON uv.id_vendedor = u.id_usuario
+         ON uv.id_vendedor = v.id_vendedor
         AND uv.disponibilidad = ?
         AND uv.ultima_actualizacion >= ?
       WHERE ${condiciones.join(' AND ')}

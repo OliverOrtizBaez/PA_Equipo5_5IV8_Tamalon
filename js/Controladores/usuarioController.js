@@ -5,8 +5,8 @@ const { validar } = require('../utils/validaciones');
 const obtenerPerfil = asyncHandler(async (req, res) => {
   const [[usuario]] = await pool.query(
     `SELECT id_usuario, nombre_completo, correo, telefono, foto_perfil, rol, estado_cuenta,
-            zona_horaria, fecha_creacion, fecha_corte, renovacion
-       FROM usuarios
+            zona_horaria, fecha_creacion, tipo, plan, fecha_corte, renovacion
+       FROM vw_usuario
       WHERE id_usuario = ?
       LIMIT 1`,
     [req.usuario.id]

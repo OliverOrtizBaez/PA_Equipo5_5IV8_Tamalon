@@ -1,10 +1,10 @@
 const router = require('express').Router();
 const admin = require('../Controladores/adminController');
-const { verificarSesion, verificarRol } = require('../middlewares/autenticacion');
-const { ROLES } = require('../config/constantes');
+const { verificarSesion, verificarTipo } = require('../middlewares/autenticacion');
+const { TIPOS } = require('../config/constantes');
 
 // Todo /api/admin exige sesion valida y rol Administrador
-router.use(verificarSesion, verificarRol(ROLES.ADMIN));
+router.use(verificarSesion, verificarTipo(TIPOS.ADMIN));
 
 router.post('/nuevo', admin.crearAdministrador);                          // RF1.3
 router.get('/suscripciones', admin.consultarSuscripciones);               // RF16.1

@@ -3,7 +3,7 @@
 require('dotenv').config();
 const { pool } = require('../js/config/db');
 const { crearCuenta } = require('../js/services/cuentasService');
-const { ROLES } = require('../js/config/constantes');
+const { TIPOS } = require('../js/config/constantes');
 
 (async () => {
   try {
@@ -12,7 +12,7 @@ const { ROLES } = require('../js/config/constantes');
       correo: process.env.ADMIN_CORREO,
       contrasena: process.env.ADMIN_PASS,
       confirmar_contrasena: process.env.ADMIN_PASS,
-    }, ROLES.ADMIN);
+    }, TIPOS.ADMIN);
     console.log(`Administrador creado: id ${cuenta.id_usuario} (${cuenta.correo}). Borra ADMIN_PASS del .env.`);
   } catch (err) {
     console.error('No se pudo crear el administrador:', err.errores || err.message);

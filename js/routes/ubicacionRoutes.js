@@ -1,9 +1,9 @@
 const router = require('express').Router();
 const ubicacion = require('../Controladores/ubicacionController');
-const { verificarSesion, verificarRol } = require('../middlewares/autenticacion');
-const { ROLES } = require('../config/constantes');
+const { verificarSesion, verificarTipo } = require('../middlewares/autenticacion');
+const { TIPOS } = require('../config/constantes');
 
-const soloVendedores = verificarRol(ROLES.VENDEDOR_GRATUITO, ROLES.VENDEDOR_PREMIUM);
+const soloVendedores = verificarTipo(TIPOS.VENDEDOR);
 
 router.use(verificarSesion);
 

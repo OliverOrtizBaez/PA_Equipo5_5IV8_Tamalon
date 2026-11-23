@@ -1,6 +1,19 @@
 -- ============================================================
 -- Tamalon - esquema MySQL 8.0.16+ (requerido para CHECK y funciones de ventana)
--- ATENCION: este script BORRA y recrea todas las tablas.
+-- VERSION NORMALIZADA: tablas por tipo de usuario (vendedor, cliente) y columnas atomicas.
+-- ATENCION: este script BORRA y recrea todas las tablas (se pierden los datos actuales).
+-- Los tipos de dato son los mismos que en el esquema anterior.
+--
+-- Cambios respecto al esquema anterior:
+--   usuarios.rol ('Vendedor Premium', ...)  -> usuarios.tipo ('Vendedor','Cliente','Administrador')
+--                                              + plan ('Gratuito','Premium') en vendedor / cliente
+--   usuarios.fecha_corte, usuarios.renovacion       -> vendedor / cliente
+--   usuarios.intentos_fallidos/inicio_intentos/ultimo_intento -> control_acceso
+--   historial_rol (rol_anterior, rol_nuevo)         -> historial_plan (plan_anterior, plan_nuevo)
+--   registro_login.rol, solicitudes_soporte.rol_emisor -> eliminadas (se derivan de usuarios)
+--   ubi_vendedor: la PK ahora es id_vendedor (se elimina id_ubicacion)
+--   catalogo, ruta, ubi_vendedor, favorito, notificacion_enviada: FK a vendedor / cliente
+--   vw_usuario: vista de SOLO LECTURA que recompone el antiguo campo "rol" (compatibilidad)
 -- ============================================================
 CREATE DATABASE IF NOT EXISTS `tamalon_db` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE `tamalon_db`;
@@ -9,6 +22,7 @@ SET @OLD_FOREIGN_KEY_CHECKS = @@FOREIGN_KEY_CHECKS;
 SET FOREIGN_KEY_CHECKS = 0;
 SET time_zone = '+00:00';
 
+DROP VIEW  IF EXISTS `vw_usuario`;
 DROP TABLE IF EXISTS `notificacion_enviada`;
 DROP TABLE IF EXISTS `dispositivo`;
 DROP TABLE IF EXISTS `registro_login`;
@@ -17,46 +31,86 @@ DROP TABLE IF EXISTS `ruta`;
 DROP TABLE IF EXISTS `producto`;
 DROP TABLE IF EXISTS `catalogo`;
 DROP TABLE IF EXISTS `favorito`;
+DROP TABLE IF EXISTS `mensaje_contacto`;
 DROP TABLE IF EXISTS `solicitudes_soporte`;
 DROP TABLE IF EXISTS `reporte`;
 DROP TABLE IF EXISTS `ubi_vendedor`;
 DROP TABLE IF EXISTS `suscripcion`;
 DROP TABLE IF EXISTS `sesion`;
 DROP TABLE IF EXISTS `recuperacion_pass`;
-DROP TABLE IF EXISTS `historial_rol`;
+DROP TABLE IF EXISTS `historial_plan`;
+DROP TABLE IF EXISTS `historial_rol`;      -- tabla anterior, reemplazada por historial_plan
+DROP TABLE IF EXISTS `control_acceso`;
+DROP TABLE IF EXISTS `vendedor`;
+DROP TABLE IF EXISTS `cliente`;
 DROP TABLE IF EXISTS `usuarios`;
-DROP TABLE IF EXISTS `rol`;            -- eliminada: el rol vive en usuarios.rol
+DROP TABLE IF EXISTS `rol`;
 
--- 1. Usuarios -------------------------------------------------
--- fecha_corte es DATE (dia calendario en ZH-N, America/Mexico_City): ultimo dia inclusive de la vigencia Premium.
--- intentos_fallidos / inicio_intentos / ultimo_intento implementan RF2.3b.
+-- 1. Usuarios (datos comunes a TODA cuenta) -------------------
+-- tipo: a que grupo pertenece la cuenta. El plan NO vive aqui: esta en vendedor / cliente.
+-- Una cuenta 'Vendedor' tiene exactamente una fila en vendedor; una 'Cliente', una en cliente;
+-- un 'Administrador' no tiene fila en ninguna de las dos (se garantiza desde la aplicacion).
 CREATE TABLE `usuarios` (
-  `id_usuario`        int NOT NULL AUTO_INCREMENT,
-  `nombre_completo`   varchar(100) NOT NULL,
-  `contrasena`        varchar(255) NOT NULL,
-  `correo`            varchar(100) NOT NULL,
-  `telefono`          varchar(10) DEFAULT NULL,
-  `foto_perfil`       text,
-  `rol`               varchar(30) NOT NULL,
-  `estado_cuenta`     varchar(30) NOT NULL DEFAULT 'Activa',
-  `zona_horaria`      varchar(50) NOT NULL DEFAULT 'America/Mexico_City',
-  `fecha_creacion`    timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `fin_suspension`    timestamp NULL DEFAULT NULL,
-  `intentos_fallidos` int NOT NULL DEFAULT 0,
-  `inicio_intentos`   timestamp NULL DEFAULT NULL,
-  `ultimo_intento`    timestamp NULL DEFAULT NULL,
-  `fecha_corte`       date DEFAULT NULL,
-  `renovacion`        tinyint(1) NOT NULL DEFAULT 0,
+  `id_usuario`      int NOT NULL AUTO_INCREMENT,
+  `nombre_completo` varchar(100) NOT NULL,
+  `contrasena`      varchar(255) NOT NULL,
+  `correo`          varchar(100) NOT NULL,
+  `telefono`        varchar(10) DEFAULT NULL,
+  `foto_perfil`     text,
+  `tipo`            varchar(20) NOT NULL,
+  `estado_cuenta`   varchar(30) NOT NULL DEFAULT 'Activa',
+  `zona_horaria`    varchar(50) NOT NULL DEFAULT 'America/Mexico_City',
+  `fecha_creacion`  timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `fin_suspension`  timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id_usuario`),
   UNIQUE KEY `correo` (`correo`),
-  KEY `idx_usuarios_rol` (`rol`),
+  KEY `idx_usuarios_tipo` (`tipo`),
   KEY `idx_usuarios_suspension` (`estado_cuenta`, `fin_suspension`),
-  CONSTRAINT `chk_usuarios_rol` CHECK (`rol` IN ('Vendedor Gratuito','Vendedor Premium','Cliente Gratuito','Cliente Premium','Administrador')),
+  CONSTRAINT `chk_usuarios_tipo` CHECK (`tipo` IN ('Vendedor','Cliente','Administrador')),
   CONSTRAINT `chk_usuarios_estado` CHECK (`estado_cuenta` IN ('Activa','Suspendida indefinidamente','Suspendida temporalmente'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 2. Suscripcion = libro de pagos (compras y renovaciones) ------
--- Los cambios manuales del administrador NO generan fila aqui (van a historial_rol).
+-- 2. Control de acceso (RF2.3b): intentos fallidos de login, 1 fila por usuario
+-- Se crea junto con la cuenta. ultimo_intento / inicio_intentos son NULL cuando no hay intentos.
+CREATE TABLE `control_acceso` (
+  `id_usuario`        int NOT NULL,
+  `intentos_fallidos` int NOT NULL DEFAULT 0,
+  `inicio_intentos`   timestamp NULL DEFAULT NULL,
+  `ultimo_intento`    timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id_usuario`),
+  CONSTRAINT `fk_control_acceso_usuario` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 3. Vendedor (datos propios del tipo Vendedor) ----------------
+-- fecha_corte es DATE (dia calendario en ZH-N, America/Mexico_City): ultimo dia inclusive de la vigencia Premium.
+-- fecha_corte solo puede tener valor si el plan es Premium.
+CREATE TABLE `vendedor` (
+  `id_vendedor` int NOT NULL,
+  `plan`        varchar(20) NOT NULL DEFAULT 'Gratuito',
+  `fecha_corte` date DEFAULT NULL,
+  `renovacion`  tinyint(1) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id_vendedor`),
+  KEY `idx_vendedor_plan` (`plan`),
+  CONSTRAINT `fk_vendedor_usuario` FOREIGN KEY (`id_vendedor`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE,
+  CONSTRAINT `chk_vendedor_plan` CHECK (`plan` IN ('Gratuito','Premium')),
+  CONSTRAINT `chk_vendedor_corte` CHECK (`plan` = 'Premium' OR `fecha_corte` IS NULL)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 4. Cliente (datos propios del tipo Cliente) ------------------
+CREATE TABLE `cliente` (
+  `id_cliente`  int NOT NULL,
+  `plan`        varchar(20) NOT NULL DEFAULT 'Gratuito',
+  `fecha_corte` date DEFAULT NULL,
+  `renovacion`  tinyint(1) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id_cliente`),
+  KEY `idx_cliente_plan` (`plan`),
+  CONSTRAINT `fk_cliente_usuario` FOREIGN KEY (`id_cliente`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE,
+  CONSTRAINT `chk_cliente_plan` CHECK (`plan` IN ('Gratuito','Premium')),
+  CONSTRAINT `chk_cliente_corte` CHECK (`plan` = 'Premium' OR `fecha_corte` IS NULL)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 5. Suscripcion = libro de pagos (compras y renovaciones) ------
+-- Los cambios manuales del administrador NO generan fila aqui (van a historial_plan).
 CREATE TABLE `suscripcion` (
   `id_suscripcion`     int NOT NULL AUTO_INCREMENT,
   `id_usuario`         int NOT NULL,
@@ -75,7 +129,7 @@ CREATE TABLE `suscripcion` (
   CONSTRAINT `chk_suscripcion_estado` CHECK (`estado_pago` IN ('Aprobado','Rechazado','Sin confirmar'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 3. Sesion (token = SHA-256 del token entregado al cliente) ---
+-- 6. Sesion (token = SHA-256 del token entregado al cliente) ---
 CREATE TABLE `sesion` (
   `id_sesion`        int NOT NULL AUTO_INCREMENT,
   `id_usuario`       int NOT NULL,
@@ -89,7 +143,7 @@ CREATE TABLE `sesion` (
   CONSTRAINT `fk_sesion_usuario` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 4. Recuperacion de contrasena (token = SHA-256) ---------------
+-- 7. Recuperacion de contrasena (token = SHA-256) ---------------
 CREATE TABLE `recuperacion_pass` (
   `id_recuperacion`  int NOT NULL AUTO_INCREMENT,
   `id_usuario`       int NOT NULL,
@@ -103,33 +157,38 @@ CREATE TABLE `recuperacion_pass` (
   CONSTRAINT `fk_recup_usuario` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 5. Historial de cambios manuales de rol (RF17d) ---------------
-CREATE TABLE `historial_rol` (
-  `id_historial` int NOT NULL AUTO_INCREMENT,
-  `id_admin`     int NOT NULL,
-  `id_usuario`   int NOT NULL,
-  `rol_anterior` varchar(30) NOT NULL,
-  `rol_nuevo`    varchar(30) NOT NULL,
-  `fech_hrs`     timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+-- 8. Historial de cambios manuales de plan hechos por el administrador (RF17d)
+-- Antes: historial_rol con rol_anterior / rol_nuevo ('Vendedor Gratuito' -> 'Vendedor Premium').
+-- El tipo de cuenta nunca cambia, solo el plan, y el tipo se obtiene de usuarios.
+CREATE TABLE `historial_plan` (
+  `id_historial`  int NOT NULL AUTO_INCREMENT,
+  `id_admin`      int NOT NULL,
+  `id_usuario`    int NOT NULL,
+  `plan_anterior` varchar(20) NOT NULL,
+  `plan_nuevo`    varchar(20) NOT NULL,
+  `fech_hrs`      timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id_historial`),
   KEY `fk_historial_admin` (`id_admin`),
   KEY `fk_historial_usuario` (`id_usuario`),
   CONSTRAINT `fk_historial_admin` FOREIGN KEY (`id_admin`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE,
-  CONSTRAINT `fk_historial_usuario` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE
+  CONSTRAINT `fk_historial_usuario` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE,
+  CONSTRAINT `chk_historial_plan_anterior` CHECK (`plan_anterior` IN ('Gratuito','Premium')),
+  CONSTRAINT `chk_historial_plan_nuevo` CHECK (`plan_nuevo` IN ('Gratuito','Premium'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 6. Registro de inicios de sesion exitosos (RF20a, retencion 12 meses)
+-- 9. Registro de inicios de sesion exitosos (RF20a, retencion 12 meses)
+-- Se elimino la columna rol: era una copia derivable de usuarios.
 CREATE TABLE `registro_login` (
   `id_registro` bigint NOT NULL AUTO_INCREMENT,
   `id_usuario`  int NOT NULL,
-  `rol`         varchar(30) NOT NULL,
   `fech_hrs`    timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id_registro`),
   KEY `idx_registro_login_fecha` (`fech_hrs`),
+  KEY `fk_registro_login_usuario` (`id_usuario`),
   CONSTRAINT `fk_registro_login_usuario` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 7. Catalogo ---------------------------------------------------
+-- 10. Catalogo (pertenece a un vendedor) -----------------------
 CREATE TABLE `catalogo` (
   `id_catalogo`   int NOT NULL AUTO_INCREMENT,
   `id_vendedor`   int NOT NULL,
@@ -138,11 +197,11 @@ CREATE TABLE `catalogo` (
   `fech_creacion` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id_catalogo`),
   UNIQUE KEY `uq_catalogo_nombre` (`id_vendedor`, `nombre`),
-  CONSTRAINT `fk_catalogo_vendedor` FOREIGN KEY (`id_vendedor`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE,
+  CONSTRAINT `fk_catalogo_vendedor` FOREIGN KEY (`id_vendedor`) REFERENCES `vendedor` (`id_vendedor`) ON DELETE CASCADE,
   CONSTRAINT `chk_catalogo_estado` CHECK (`estado` IN ('Visible','Oculto'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 8. Producto ---------------------------------------------------
+-- 11. Producto --------------------------------------------------
 CREATE TABLE `producto` (
   `id_producto`   int NOT NULL AUTO_INCREMENT,
   `id_catalogo`   int NOT NULL,
@@ -160,7 +219,7 @@ CREATE TABLE `producto` (
   CONSTRAINT `chk_producto_categoria` CHECK (`categoria` IN ('Comida preparada','Bebidas','Postres y dulces','Frutas y verduras','Botanas y snacks','Otros'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 9. Ruta (una por dia por vendedor, RF14.1d) -------------------
+-- 12. Ruta (una por dia por vendedor, RF14.1d) -----------------
 CREATE TABLE `ruta` (
   `id_ruta`     int NOT NULL AUTO_INCREMENT,
   `id_vendedor` int NOT NULL,
@@ -168,12 +227,12 @@ CREATE TABLE `ruta` (
   `dia_semana`  varchar(20) NOT NULL,
   PRIMARY KEY (`id_ruta`),
   UNIQUE KEY `uq_ruta_dia` (`id_vendedor`, `dia_semana`),
-  CONSTRAINT `fk_ruta_vendedor` FOREIGN KEY (`id_vendedor`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE,
+  CONSTRAINT `fk_ruta_vendedor` FOREIGN KEY (`id_vendedor`) REFERENCES `vendedor` (`id_vendedor`) ON DELETE CASCADE,
   CONSTRAINT `chk_ruta_estado` CHECK (`estado` IN ('Activa','Inactiva')),
   CONSTRAINT `chk_ruta_dia` CHECK (`dia_semana` IN ('Lunes','Martes','Miercoles','Jueves','Viernes','Sabado','Domingo'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 10. Waypoint --------------------------------------------------
+-- 13. Waypoint --------------------------------------------------
 CREATE TABLE `waypoint` (
   `id_waypoint` int NOT NULL AUTO_INCREMENT,
   `id_ruta`     int NOT NULL,
@@ -185,23 +244,23 @@ CREATE TABLE `waypoint` (
   CONSTRAINT `fk_waypoint_ruta` FOREIGN KEY (`id_ruta`) REFERENCES `ruta` (`id_ruta`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 11. Ubicacion del vendedor (solo la ultima, RF6.2b) -----------
+-- 14. Ubicacion del vendedor (solo la ultima, RF6.2b) ----------
+-- Relacion 1 a 1 con vendedor: id_vendedor es la PK (antes: id_ubicacion + UNIQUE id_vendedor).
+-- El UPSERT "INSERT ... ON DUPLICATE KEY UPDATE" sigue funcionando igual.
 CREATE TABLE `ubi_vendedor` (
-  `id_ubicacion`         int NOT NULL AUTO_INCREMENT,
   `id_vendedor`          int NOT NULL,
   `latitud`              double NOT NULL,
   `longitud`             double NOT NULL,
   `disponibilidad`       varchar(20) NOT NULL DEFAULT 'Fuera de ruta',
   `ultima_actualizacion` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id_ubicacion`),
-  UNIQUE KEY `id_vendedor` (`id_vendedor`),
+  PRIMARY KEY (`id_vendedor`),
   KEY `idx_ubi_disponibilidad` (`disponibilidad`, `ultima_actualizacion`),
   KEY `idx_ubi_cercanos` (`disponibilidad`, `ultima_actualizacion`, `latitud`, `longitud`),
-  CONSTRAINT `fk_ubicacion_vendedor` FOREIGN KEY (`id_vendedor`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE,
+  CONSTRAINT `fk_ubicacion_vendedor` FOREIGN KEY (`id_vendedor`) REFERENCES `vendedor` (`id_vendedor`) ON DELETE CASCADE,
   CONSTRAINT `chk_ubi_disponibilidad` CHECK (`disponibilidad` IN ('En ruta','Fuera de ruta'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 12. Favorito (maximo 5 por cliente se valida en la API, RF9.1c)
+-- 15. Favorito: cliente -> vendedor (maximo 5 por cliente se valida en la API, RF9.1c)
 CREATE TABLE `favorito` (
   `id_favorito` int NOT NULL AUTO_INCREMENT,
   `id_cliente`  int NOT NULL,
@@ -209,11 +268,12 @@ CREATE TABLE `favorito` (
   PRIMARY KEY (`id_favorito`),
   UNIQUE KEY `uq_favorito` (`id_cliente`, `id_vendedor`),
   KEY `fk_favorito_vendedor` (`id_vendedor`),
-  CONSTRAINT `fk_favorito_cliente` FOREIGN KEY (`id_cliente`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE,
-  CONSTRAINT `fk_favorito_vendedor` FOREIGN KEY (`id_vendedor`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE
+  CONSTRAINT `fk_favorito_cliente` FOREIGN KEY (`id_cliente`) REFERENCES `cliente` (`id_cliente`) ON DELETE CASCADE,
+  CONSTRAINT `fk_favorito_vendedor` FOREIGN KEY (`id_vendedor`) REFERENCES `vendedor` (`id_vendedor`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 13. Reporte ---------------------------------------------------
+-- 16. Reporte entre usuarios (emisor y reportado son de tipo opuesto; se valida en la API)
+-- Ambos apuntan a usuarios porque pueden ser vendedor o cliente. El tipo del emisor se obtiene con JOIN a usuarios.
 CREATE TABLE `reporte` (
   `id_reporte`   int NOT NULL AUTO_INCREMENT,
   `id_emisor`    int NOT NULL,
@@ -228,15 +288,15 @@ CREATE TABLE `reporte` (
   CONSTRAINT `fk_reporte_reportado` FOREIGN KEY (`id_reportado`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Solicitudes de ayuda al equipo Tamalon (distintas de reportes entre usuarios)
+-- 17. Solicitudes de ayuda al equipo Tamalon (distintas de reportes entre usuarios)
+-- Se elimino rol_emisor: era una copia derivable de usuarios.
 CREATE TABLE `solicitudes_soporte` (
-  `id_solicitud`  int NOT NULL AUTO_INCREMENT,
-  `id_usuario`    int NOT NULL,
-  `rol_emisor`    varchar(30) NOT NULL,
-  `categoria`     varchar(20) NOT NULL,
-  `asunto`        varchar(120) NOT NULL,
-  `descripcion`   varchar(1000) NOT NULL,
-  `estado`        varchar(20) NOT NULL DEFAULT 'pendiente',
+  `id_solicitud`   int NOT NULL AUTO_INCREMENT,
+  `id_usuario`     int NOT NULL,
+  `categoria`      varchar(20) NOT NULL,
+  `asunto`         varchar(120) NOT NULL,
+  `descripcion`    varchar(1000) NOT NULL,
+  `estado`         varchar(20) NOT NULL DEFAULT 'pendiente',
   `fecha_creacion` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id_solicitud`),
   KEY `idx_solicitud_soporte_usuario_fecha` (`id_usuario`, `fecha_creacion`),
@@ -245,7 +305,7 @@ CREATE TABLE `solicitudes_soporte` (
   CONSTRAINT `chk_solicitud_soporte_estado` CHECK (`estado` IN ('pendiente','en_revision','atendida'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Mensajes enviados desde el formulario público de contacto de la landing.
+-- 18. Mensajes enviados desde el formulario publico de contacto de la landing.
 CREATE TABLE `mensaje_contacto` (
   `id_mensaje`      int NOT NULL AUTO_INCREMENT,
   `nombre`          varchar(100) NOT NULL,
@@ -256,7 +316,7 @@ CREATE TABLE `mensaje_contacto` (
   KEY `idx_mensaje_contacto_fecha` (`fecha_creacion`, `id_mensaje`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 14. Dispositivos para push (RF9.2 / RF9.3) --------------------
+-- 19. Dispositivos para push (RF9.2 / RF9.3) --------------------
 CREATE TABLE `dispositivo` (
   `id_dispositivo` int NOT NULL AUTO_INCREMENT,
   `id_usuario`     int NOT NULL,
@@ -269,7 +329,7 @@ CREATE TABLE `dispositivo` (
   CONSTRAINT `fk_dispositivo_usuario` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 15. Control de frecuencia de notificaciones (max 1 cada 30 min)
+-- 20. Control de frecuencia de notificaciones (max 1 cada 30 min)
 CREATE TABLE `notificacion_enviada` (
   `id_notificacion` bigint NOT NULL AUTO_INCREMENT,
   `id_cliente`      int NOT NULL,
@@ -278,8 +338,36 @@ CREATE TABLE `notificacion_enviada` (
   `fech_hrs`        timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id_notificacion`),
   KEY `idx_notif_par` (`id_cliente`, `id_vendedor`, `tipo`, `fech_hrs`),
-  CONSTRAINT `fk_notif_cliente` FOREIGN KEY (`id_cliente`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE,
-  CONSTRAINT `fk_notif_vendedor` FOREIGN KEY (`id_vendedor`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE
+  KEY `fk_notif_vendedor` (`id_vendedor`),
+  CONSTRAINT `fk_notif_cliente` FOREIGN KEY (`id_cliente`) REFERENCES `cliente` (`id_cliente`) ON DELETE CASCADE,
+  CONSTRAINT `fk_notif_vendedor` FOREIGN KEY (`id_vendedor`) REFERENCES `vendedor` (`id_vendedor`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = @OLD_FOREIGN_KEY_CHECKS;
+
+-- 21. Vista de compatibilidad (SOLO LECTURA) --------------------
+-- Une usuarios con vendedor / cliente y recompone el antiguo campo "rol" ('Vendedor Premium', etc.)
+-- para que las lecturas existentes sigan devolviendo el mismo texto al frontend y a Android.
+-- NUNCA escribir (INSERT/UPDATE) a traves de la vista: escribir en usuarios, vendedor o cliente.
+-- Para el Administrador: plan, fecha_corte = NULL y rol = 'Administrador'.
+CREATE OR REPLACE VIEW `vw_usuario` AS
+SELECT
+  u.`id_usuario`,
+  u.`nombre_completo`,
+  u.`contrasena`,
+  u.`correo`,
+  u.`telefono`,
+  u.`foto_perfil`,
+  u.`tipo`,
+  u.`estado_cuenta`,
+  u.`zona_horaria`,
+  u.`fecha_creacion`,
+  u.`fin_suspension`,
+  COALESCE(v.`plan`, c.`plan`)               AS `plan`,
+  COALESCE(v.`fecha_corte`, c.`fecha_corte`) AS `fecha_corte`,
+  COALESCE(v.`renovacion`, c.`renovacion`, 0) AS `renovacion`,
+  CASE WHEN u.`tipo` = 'Administrador' THEN 'Administrador'
+       ELSE CONCAT(u.`tipo`, ' ', COALESCE(v.`plan`, c.`plan`)) END AS `rol`
+FROM `usuarios` u
+LEFT JOIN `vendedor` v ON v.`id_vendedor` = u.`id_usuario`
+LEFT JOIN `cliente`  c ON c.`id_cliente`  = u.`id_usuario`;

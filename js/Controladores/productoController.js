@@ -3,7 +3,6 @@ const C = require('../config/constantes');
 const { ErrorHttp, ErrorValidacion, asyncHandler } = require('../utils/errores');
 const { entero } = require('../utils/validaciones');
 
-const ROLES_VENDEDOR = [C.ROLES.VENDEDOR_GRATUITO, C.ROLES.VENDEDOR_PREMIUM];
 const CATEGORIAS = ['Comida preparada', 'Bebidas', 'Postres y dulces', 'Frutas y verduras', 'Botanas y snacks', 'Otros'];
 const ESTADOS = ['Visible', 'Oculto'];
 
@@ -14,7 +13,7 @@ function idValido(valor, etiqueta = 'Identificador') {
 }
 
 function exigirVendedor(req) {
-  if (!ROLES_VENDEDOR.includes(req.usuario.rol)) {
+  if (req.usuario.tipo !== C.TIPOS.VENDEDOR) {
     throw new ErrorHttp(403, 'Solo las cuentas de vendedor pueden administrar productos');
   }
 }
@@ -77,10 +76,11 @@ const obtenerPorCatalogo = asyncHandler(async (req, res) => {
   const [[catalogo]] = await pool.query(
     `SELECT c.id_catalogo, c.id_vendedor
        FROM catalogo c
-       JOIN usuarios u ON u.id_usuario = c.id_vendedor
+       JOIN vendedor v ON v.id_vendedor = c.id_vendedor
+       JOIN usuarios u ON u.id_usuario = v.id_vendedor
       WHERE c.id_catalogo = ? AND c.estado = 'Visible'
-        AND u.rol IN (?, ?) AND u.estado_cuenta = ?`,
-    [idCatalogo, ...ROLES_VENDEDOR, C.ESTADOS_CUENTA.ACTIVA]
+        AND u.estado_cuenta = ?`,
+    [idCatalogo, C.ESTADOS_CUENTA.ACTIVA]
   );
   if (!catalogo) throw new ErrorHttp(404, 'No se encontró el catálogo');
 
@@ -115,17 +115,17 @@ const crearProducto = asyncHandler(async (req, res) => {
     if (catalogos[0].estado !== 'Visible') throw new ErrorHttp(409, 'No puedes agregar productos a un catálogo oculto');
 
     const [[vendedor]] = await conn.query(
-      'SELECT rol FROM usuarios WHERE id_usuario = ? FOR UPDATE',
+      'SELECT plan FROM vendedor WHERE id_vendedor = ? FOR UPDATE',
       [req.usuario.id]
     );
-    if (!vendedor || !ROLES_VENDEDOR.includes(vendedor.rol)) {
+    if (!vendedor) {
       throw new ErrorHttp(403, 'Solo las cuentas de vendedor pueden administrar productos');
     }
     const [[{ total }]] = await conn.query(
       "SELECT COUNT(*) AS total FROM producto WHERE id_catalogo = ? AND estado = 'Visible'",
       [idCatalogo]
     );
-    const limite = vendedor.rol === C.ROLES.VENDEDOR_PREMIUM
+    const limite = vendedor.plan === C.PLANES.PREMIUM
       ? C.LIMITE_PRODUCTOS_PREMIUM
       : C.LIMITE_PRODUCTOS_GRATIS;
     if (total >= limite) throw new ErrorHttp(409, `Tu plan permite hasta ${limite} productos visibles por catálogo`);
@@ -164,14 +164,14 @@ const actualizarProducto = asyncHandler(async (req, res) => {
     const producto = await buscarProductoPropio(conn, id, req.usuario.id, true);
     if (actualizados.estado === 'Visible' && producto.estado !== 'Visible') {
       const [[vendedor]] = await conn.query(
-        'SELECT rol FROM usuarios WHERE id_usuario = ? FOR UPDATE',
+        'SELECT plan FROM vendedor WHERE id_vendedor = ? FOR UPDATE',
         [req.usuario.id]
       );
       const [[{ total }]] = await conn.query(
         "SELECT COUNT(*) AS total FROM producto WHERE id_catalogo = ? AND estado = 'Visible'",
         [producto.id_catalogo]
       );
-      const limite = vendedor.rol === C.ROLES.VENDEDOR_PREMIUM
+      const limite = vendedor.plan === C.PLANES.PREMIUM
         ? C.LIMITE_PRODUCTOS_PREMIUM
         : C.LIMITE_PRODUCTOS_GRATIS;
       if (total >= limite) throw new ErrorHttp(409, `Tu plan permite hasta ${limite} productos visibles por catálogo`);

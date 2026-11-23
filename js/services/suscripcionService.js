@@ -1,13 +1,13 @@
 // Logica de cambio de plan. Recibe una conexion de transaccion para que el rol, los catalogos,
 // los productos y las rutas cambien juntos o no cambien. La reutilizaran los pagos (RF5.x) y los jobs.
 const {
-  ROLES, PREMIUM_DIAS, LIMITE_CATALOGOS_PREMIUM, LIMITE_PRODUCTOS_GRATIS, LIMITE_PRODUCTOS_PREMIUM,
+  TIPOS, PLANES, componerRol, PREMIUM_DIAS, LIMITE_CATALOGOS_PREMIUM, LIMITE_PRODUCTOS_GRATIS, LIMITE_PRODUCTOS_PREMIUM,
 } = require('../config/constantes');
 const { fechaEnZona, sumarDiasFecha } = require('../utils/fechas');
 
-const esVendedor = (rol) => rol === ROLES.VENDEDOR_GRATUITO || rol === ROLES.VENDEDOR_PREMIUM;
-const esGratuito = (rol) => rol === ROLES.VENDEDOR_GRATUITO || rol === ROLES.CLIENTE_GRATUITO;
-const esPremium = (rol) => rol === ROLES.VENDEDOR_PREMIUM || rol === ROLES.CLIENTE_PREMIUM;
+const esVendedor = (usuario) => usuario.tipo === TIPOS.VENDEDOR;
+const esGratuito = (usuario) => usuario.plan === PLANES.GRATUITO;
+const esPremium = (usuario) => usuario.plan === PLANES.PREMIUM;
 
 /** Fecha de corte = dia de hoy en ZH-N + 30 dias (RF5.7 / RF17b). Devuelve 'YYYY-MM-DD'. */
 const calcularFechaCorte = (desde = new Date()) => sumarDiasFecha(fechaEnZona(desde), PREMIUM_DIAS);
@@ -18,11 +18,19 @@ const calcularFechaCorte = (desde = new Date()) => sumarDiasFecha(fechaEnZona(de
  * Cliente: su lista de favoritos queda habilitada solo por tener el rol (RF9.4b).
  */
 async function activarPremium(conn, usuario, { fechaCorte, renovacion }) {
-  const rolNuevo = usuario.rol === ROLES.VENDEDOR_GRATUITO ? ROLES.VENDEDOR_PREMIUM : ROLES.CLIENTE_PREMIUM;
-  await conn.query('UPDATE usuarios SET rol = ?, fecha_corte = ?, renovacion = ? WHERE id_usuario = ?',
-    [rolNuevo, fechaCorte, renovacion ? 1 : 0, usuario.id_usuario]);
-  if (esVendedor(usuario.rol)) await restaurarContenidoVendedor(conn, usuario.id_usuario);
-  return rolNuevo;
+  if (usuario.tipo === TIPOS.VENDEDOR) {
+    await conn.query(
+      'UPDATE vendedor SET plan = ?, fecha_corte = ?, renovacion = ? WHERE id_vendedor = ?',
+      [PLANES.PREMIUM, fechaCorte, renovacion ? 1 : 0, usuario.id_usuario]
+    );
+    await restaurarContenidoVendedor(conn, usuario.id_usuario);
+  } else if (usuario.tipo === TIPOS.CLIENTE) {
+    await conn.query(
+      'UPDATE cliente SET plan = ?, fecha_corte = ?, renovacion = ? WHERE id_cliente = ?',
+      [PLANES.PREMIUM, fechaCorte, renovacion ? 1 : 0, usuario.id_usuario]
+    );
+  }
+  return componerRol(usuario.tipo, PLANES.PREMIUM);
 }
 
 /**
@@ -31,11 +39,19 @@ async function activarPremium(conn, usuario, { fechaCorte, renovacion }) {
  * Cliente: los favoritos NO se borran; quedan inaccesibles por rol (RF9.4a).
  */
 async function degradarAGratuito(conn, usuario) {
-  const rolNuevo = usuario.rol === ROLES.VENDEDOR_PREMIUM ? ROLES.VENDEDOR_GRATUITO : ROLES.CLIENTE_GRATUITO;
-  await conn.query('UPDATE usuarios SET rol = ?, fecha_corte = NULL, renovacion = 0 WHERE id_usuario = ?',
-    [rolNuevo, usuario.id_usuario]);
-  if (esVendedor(usuario.rol)) await limitarContenidoVendedor(conn, usuario.id_usuario);
-  return rolNuevo;
+  if (usuario.tipo === TIPOS.VENDEDOR) {
+    await conn.query(
+      'UPDATE vendedor SET plan = ?, fecha_corte = NULL, renovacion = 0 WHERE id_vendedor = ?',
+      [PLANES.GRATUITO, usuario.id_usuario]
+    );
+    await limitarContenidoVendedor(conn, usuario.id_usuario);
+  } else if (usuario.tipo === TIPOS.CLIENTE) {
+    await conn.query(
+      'UPDATE cliente SET plan = ?, fecha_corte = NULL, renovacion = 0 WHERE id_cliente = ?',
+      [PLANES.GRATUITO, usuario.id_usuario]
+    );
+  }
+  return componerRol(usuario.tipo, PLANES.GRATUITO);
 }
 
 // RF5.5a + RF5.5b + RF5.6

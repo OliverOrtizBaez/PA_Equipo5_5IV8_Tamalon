@@ -3,7 +3,6 @@ const C = require('../config/constantes');
 const { ErrorHttp, ErrorValidacion, asyncHandler } = require('../utils/errores');
 const { entero } = require('../utils/validaciones');
 
-const ROLES_VENDEDOR = [C.ROLES.VENDEDOR_GRATUITO, C.ROLES.VENDEDOR_PREMIUM];
 const ESTADOS = ['Visible', 'Oculto'];
 
 function idValido(valor, etiqueta = 'Identificador') {
@@ -13,7 +12,7 @@ function idValido(valor, etiqueta = 'Identificador') {
 }
 
 function exigirVendedor(req) {
-  if (!ROLES_VENDEDOR.includes(req.usuario.rol)) {
+  if (req.usuario.tipo !== C.TIPOS.VENDEDOR) {
     throw new ErrorHttp(403, 'Solo las cuentas de vendedor pueden administrar catálogos');
   }
 }
@@ -41,11 +40,12 @@ const obtenerPorVendedor = asyncHandler(async (req, res) => {
   const [filas] = await pool.query(
     `SELECT c.id_catalogo, c.id_vendedor, c.nombre, c.estado, c.fech_creacion
        FROM catalogo c
-       JOIN usuarios u ON u.id_usuario = c.id_vendedor
+       JOIN vendedor v ON v.id_vendedor = c.id_vendedor
+       JOIN usuarios u ON u.id_usuario = v.id_vendedor
       WHERE c.id_vendedor = ? AND c.estado = 'Visible'
-        AND u.rol IN (?, ?) AND u.estado_cuenta = ?
+        AND u.estado_cuenta = ?
       ORDER BY c.fech_creacion ASC, c.id_catalogo ASC`,
-    [idVendedor, ...ROLES_VENDEDOR, C.ESTADOS_CUENTA.ACTIVA]
+    [idVendedor, C.ESTADOS_CUENTA.ACTIVA]
   );
   res.json({ catalogos: filas });
 });
@@ -55,17 +55,17 @@ const crearCatalogo = asyncHandler(async (req, res) => {
   const nombre = validarNombre(req.body?.nombre);
   const resultado = await transaccion(async (conn) => {
     const [[vendedor]] = await conn.query(
-      'SELECT rol FROM usuarios WHERE id_usuario = ? FOR UPDATE',
+      'SELECT plan FROM vendedor WHERE id_vendedor = ? FOR UPDATE',
       [req.usuario.id]
     );
-    if (!vendedor || !ROLES_VENDEDOR.includes(vendedor.rol)) {
+    if (!vendedor) {
       throw new ErrorHttp(403, 'Solo las cuentas de vendedor pueden administrar catálogos');
     }
     const [[{ total }]] = await conn.query(
       "SELECT COUNT(*) AS total FROM catalogo WHERE id_vendedor = ? AND estado = 'Visible'",
       [req.usuario.id]
     );
-    const limite = vendedor.rol === C.ROLES.VENDEDOR_PREMIUM
+    const limite = vendedor.plan === C.PLANES.PREMIUM
       ? C.LIMITE_CATALOGOS_PREMIUM
       : 1;
     if (total >= limite) throw new ErrorHttp(409, `Tu plan permite hasta ${limite} catálogo(s) visible(s)`);
@@ -96,14 +96,14 @@ const actualizarCatalogo = asyncHandler(async (req, res) => {
     const catalogo = await buscarCatalogoPropio(conn, id, req.usuario.id, true);
     if (estado === 'Visible' && catalogo.estado !== 'Visible') {
       const [[vendedor]] = await conn.query(
-        'SELECT rol FROM usuarios WHERE id_usuario = ? FOR UPDATE',
+        'SELECT plan FROM vendedor WHERE id_vendedor = ? FOR UPDATE',
         [req.usuario.id]
       );
       const [[{ total }]] = await conn.query(
         "SELECT COUNT(*) AS total FROM catalogo WHERE id_vendedor = ? AND estado = 'Visible'",
         [req.usuario.id]
       );
-      const limite = vendedor.rol === C.ROLES.VENDEDOR_PREMIUM ? C.LIMITE_CATALOGOS_PREMIUM : 1;
+      const limite = vendedor.plan === C.PLANES.PREMIUM ? C.LIMITE_CATALOGOS_PREMIUM : 1;
       if (total >= limite) throw new ErrorHttp(409, `Tu plan permite hasta ${limite} catálogo(s) visible(s)`);
     }
 

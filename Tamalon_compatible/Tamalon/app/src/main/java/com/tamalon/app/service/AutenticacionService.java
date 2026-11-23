@@ -7,6 +7,7 @@ import com.tamalon.app.data.local.AppDatabase;
 import com.tamalon.app.data.local.UsuarioDao;
 import com.tamalon.app.model.Usuario;
 import com.tamalon.app.network.*;
+import com.tamalon.app.repository.UsuarioRepository;
 import com.tamalon.app.validation.*;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
@@ -114,14 +115,8 @@ public class AutenticacionService {
                     Usuario localUser = dtoToLocalUsuario(lr.usuario);
                     executor.execute(() -> {
                         try {
-                            UsuarioDao dao = db.usuarioDao();
-                            Usuario existing = dao.obtenerPorCorreo(correoNorm);
-                            if (existing != null) {
-                                localUser.id = existing.id;
-                                dao.actualizar(localUser);
-                            } else {
-                                dao.insertar(localUser);
-                            }
+                            UsuarioRepository repo = new UsuarioRepository(context);
+                            repo.guardarUsuarioTrasLogin(localUser);
                         } catch (Exception e) {
                             Log.e(TAG, "Error syncing user to Room", e);
                         }
@@ -181,20 +176,35 @@ public class AutenticacionService {
         u.telefono = dto.telefono;
         u.fotoUri = dto.fotoPerfil;
 
-        String roleLower = dto.rol != null ? dto.rol.toLowerCase() : "";
-        if (roleLower.contains("vendedor")) {
-            u.rol = "vendedor";
-        } else if (roleLower.contains("cliente")) {
-            u.rol = "cliente";
+        if (dto.tipo != null) {
+            if ("vendedor".equalsIgnoreCase(dto.tipo)) {
+                u.rol = "vendedor";
+            } else {
+                u.rol = "cliente";
+            }
         } else {
-            u.rol = "cliente";
+            String roleLower = dto.rol != null ? dto.rol.toLowerCase() : "";
+            if (roleLower.contains("vendedor")) {
+                u.rol = "vendedor";
+            } else {
+                u.rol = "cliente";
+            }
         }
 
-        String planLower = dto.plan != null ? dto.plan.toLowerCase() : "";
-        if (roleLower.contains("premium") || planLower.contains("premium")) {
-            u.plan = "premium";
+        if (dto.plan != null) {
+            if ("premium".equalsIgnoreCase(dto.plan)) {
+                u.plan = "premium";
+            } else {
+                u.plan = "gratuito";
+            }
         } else {
-            u.plan = "gratuito";
+            String roleLower = dto.rol != null ? dto.rol.toLowerCase() : "";
+            String planLower = dto.plan != null ? dto.plan.toLowerCase() : "";
+            if (roleLower.contains("premium") || planLower.contains("premium")) {
+                u.plan = "premium";
+            } else {
+                u.plan = "gratuito";
+            }
         }
         return u;
     }

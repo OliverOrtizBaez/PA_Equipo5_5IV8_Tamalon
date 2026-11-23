@@ -48,10 +48,15 @@ public class TokenStore {
     }
 
     public void updatePlanAndRol(String plan, String rol) {
+        updatePlanRolTipo(plan, rol, null);
+    }
+
+    public void updatePlanRolTipo(String plan, String rol, String tipo) {
         DtoUser user = getUser();
         if (user != null) {
             if (plan != null) user.plan = plan;
             if (rol != null) user.rol = rol;
+            if (tipo != null) user.tipo = tipo;
             saveUser(user);
         }
     }

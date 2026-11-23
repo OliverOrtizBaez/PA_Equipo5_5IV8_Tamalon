@@ -7,7 +7,7 @@ const F = require('../utils/fechas');
 
 const obtenerSuscripcion = asyncHandler(async (req, res) => {
   const [[usuario]] = await pool.query(
-    'SELECT rol, fecha_corte, renovacion FROM usuarios WHERE id_usuario = ? LIMIT 1',
+    'SELECT tipo, plan, rol, fecha_corte, renovacion FROM vw_usuario WHERE id_usuario = ? LIMIT 1',
     [req.usuario.id]
   );
   if (!usuario) throw new ErrorHttp(404, 'La cuenta no existe');
@@ -20,8 +20,9 @@ const obtenerSuscripcion = asyncHandler(async (req, res) => {
     [req.usuario.id]
   );
   res.json({
+    tipo: usuario.tipo,
     rol: usuario.rol,
-    plan: S.esPremium(usuario.rol) ? 'Premium' : 'Gratuito',
+    plan: usuario.plan,
     fecha_corte: usuario.fecha_corte,
     renovacion: Boolean(usuario.renovacion),
     pago_simulado_habilitado: process.env.PAGOS_MODO === 'demo',
@@ -30,8 +31,7 @@ const obtenerSuscripcion = asyncHandler(async (req, res) => {
 });
 
 const procesarPagoPremium = asyncHandler(async (req, res) => {
-  if (![C.ROLES.VENDEDOR_GRATUITO, C.ROLES.VENDEDOR_PREMIUM, C.ROLES.CLIENTE_GRATUITO, C.ROLES.CLIENTE_PREMIUM]
-    .includes(req.usuario.rol)) {
+  if (![C.TIPOS.VENDEDOR, C.TIPOS.CLIENTE].includes(req.usuario.tipo)) {
     throw new ErrorHttp(403, 'Las cuentas de administrador no pueden contratar una suscripción');
   }
 
@@ -52,17 +52,36 @@ const procesarPagoPremium = asyncHandler(async (req, res) => {
 
   const pago = await transaccion(async (conn) => {
     const [[usuario]] = await conn.query(
-      'SELECT id_usuario, rol, fecha_corte FROM usuarios WHERE id_usuario = ? LIMIT 1 FOR UPDATE',
+      'SELECT id_usuario, tipo FROM usuarios WHERE id_usuario = ? LIMIT 1 FOR UPDATE',
       [req.usuario.id]
     );
     if (!usuario) throw new ErrorHttp(404, 'La cuenta no existe');
-    if (usuario.rol === C.ROLES.ADMIN) {
+    if (usuario.tipo === C.TIPOS.ADMIN) {
       throw new ErrorHttp(403, 'Las cuentas de administrador no pueden contratar una suscripción');
     }
 
     const ahora = new Date();
     const codigoTransaccion = `DEMO-${usuario.id_usuario}-${ahora.getTime()}`;
-    const tipo = S.esPremium(usuario.rol) ? 'Renovacion' : 'Compra';
+    let planUsuario;
+    let fechaCorteActual = null;
+    if (usuario.tipo === C.TIPOS.VENDEDOR) {
+      const [[fila]] = await conn.query(
+        'SELECT plan, fecha_corte FROM vendedor WHERE id_vendedor = ? FOR UPDATE',
+        [usuario.id_usuario]
+      );
+      planUsuario = fila?.plan;
+      fechaCorteActual = fila?.fecha_corte;
+    } else {
+      const [[fila]] = await conn.query(
+        'SELECT plan, fecha_corte FROM cliente WHERE id_cliente = ? FOR UPDATE',
+        [usuario.id_usuario]
+      );
+      planUsuario = fila?.plan;
+      fechaCorteActual = fila?.fecha_corte;
+    }
+    usuario.plan = planUsuario;
+
+    const tipo = S.esPremium(usuario) ? 'Renovacion' : 'Compra';
     const estado = resultado === 'aprobado' ? 'Aprobado' : 'Rechazado';
     const [insertado] = await conn.query(
       `INSERT INTO suscripcion
@@ -75,20 +94,29 @@ const procesarPagoPremium = asyncHandler(async (req, res) => {
       return { idSuscripcion: insertado.insertId, estado };
     }
 
-    let rol = usuario.rol;
+    let rol = C.componerRol(usuario.tipo, planUsuario);
     let fechaCorte;
-    if (S.esGratuito(usuario.rol)) {
+    if (S.esGratuito(usuario)) {
       fechaCorte = S.calcularFechaCorte(ahora);
       rol = await S.activarPremium(conn, usuario, { fechaCorte, renovacion: false });
     } else {
       const hoy = F.fechaEnZona(ahora);
-      const fechaCorteActual = usuario.fecha_corte instanceof Date
-        ? usuario.fecha_corte.toISOString().slice(0, 10)
-        : String(usuario.fecha_corte || '').slice(0, 10);
-      const base = fechaCorteActual > hoy ? fechaCorteActual : hoy;
+      const fechaCorteTexto = fechaCorteActual instanceof Date
+        ? fechaCorteActual.toISOString().slice(0, 10)
+        : String(fechaCorteActual || '').slice(0, 10);
+      const base = fechaCorteTexto > hoy ? fechaCorteTexto : hoy;
       fechaCorte = F.sumarDiasFecha(base, C.PREMIUM_DIAS);
-      await conn.query('UPDATE usuarios SET fecha_corte = ? WHERE id_usuario = ?',
-        [fechaCorte, usuario.id_usuario]);
+      if (usuario.tipo === C.TIPOS.VENDEDOR) {
+        await conn.query(
+          'UPDATE vendedor SET fecha_corte = ? WHERE id_vendedor = ?',
+          [fechaCorte, usuario.id_usuario]
+        );
+      } else {
+        await conn.query(
+          'UPDATE cliente SET fecha_corte = ? WHERE id_cliente = ?',
+          [fechaCorte, usuario.id_usuario]
+        );
+      }
     }
 
     return {

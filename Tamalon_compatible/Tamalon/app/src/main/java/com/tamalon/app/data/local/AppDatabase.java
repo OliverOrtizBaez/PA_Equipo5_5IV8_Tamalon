@@ -24,6 +24,8 @@ import com.tamalon.app.model.*;
 @Database(
     entities = {
         Usuario.class,
+        VendedorPerfil.class,
+        ClientePerfil.class,
         Catalogo.class,
         Producto.class,
         Reporte.class,
@@ -31,7 +33,7 @@ import com.tamalon.app.model.*;
         Suscripcion.class,
         Favorito.class
     },
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 public abstract class AppDatabase extends RoomDatabase {
@@ -49,7 +51,60 @@ public abstract class AppDatabase extends RoomDatabase {
         }
     };
 
+    private static final Migration MIGRATION_2_3 = new Migration(2, 3) {
+        @Override
+        public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("CREATE TABLE IF NOT EXISTS `vendedor` (" +
+                    "`id_usuario` INTEGER NOT NULL, " +
+                    "`plan` TEXT, " +
+                    "`ubicacion_latitud` REAL, " +
+                    "`ubicacion_longitud` REAL, " +
+                    "`disponible_en_ruta` INTEGER NOT NULL DEFAULT 0, " +
+                    "`ultima_ubicacion` INTEGER NOT NULL DEFAULT 0, " +
+                    "PRIMARY KEY(`id_usuario`), " +
+                    "FOREIGN KEY(`id_usuario`) REFERENCES `usuarios`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_vendedor_id_usuario` ON `vendedor` (`id_usuario`)");
+
+            database.execSQL("CREATE TABLE IF NOT EXISTS `cliente` (" +
+                    "`id_usuario` INTEGER NOT NULL, " +
+                    "`plan` TEXT, " +
+                    "PRIMARY KEY(`id_usuario`), " +
+                    "FOREIGN KEY(`id_usuario`) REFERENCES `usuarios`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_cliente_id_usuario` ON `cliente` (`id_usuario`)");
+
+            database.execSQL("INSERT INTO `vendedor` (`id_usuario`, `plan`, `ubicacion_latitud`, `ubicacion_longitud`, `disponible_en_ruta`, `ultima_ubicacion`) " +
+                    "SELECT `id`, COALESCE(`plan`, 'gratuito'), `ubicacion_latitud`, `ubicacion_longitud`, `disponible_en_ruta`, `ultima_ubicacion` " +
+                    "FROM `usuarios` WHERE `rol` = 'vendedor'");
+
+            database.execSQL("INSERT INTO `cliente` (`id_usuario`, `plan`) " +
+                    "SELECT `id`, COALESCE(`plan`, 'gratuito') " +
+                    "FROM `usuarios` WHERE `rol` <> 'vendedor'");
+
+            database.execSQL("CREATE TABLE IF NOT EXISTS `usuarios_nueva` (" +
+                    "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "`correo` TEXT NOT NULL, " +
+                    "`nombre_completo` TEXT NOT NULL, " +
+                    "`password_hash` TEXT NOT NULL, " +
+                    "`password_salt` TEXT NOT NULL, " +
+                    "`rol` TEXT NOT NULL, " +
+                    "`telefono` TEXT, " +
+                    "`foto_uri` TEXT, " +
+                    "`fecha_registro` INTEGER NOT NULL, " +
+                    "`supabase_uid` TEXT)");
+
+            database.execSQL("INSERT INTO `usuarios_nueva` (`id`, `correo`, `nombre_completo`, `password_hash`, `password_salt`, `rol`, `telefono`, `foto_uri`, `fecha_registro`, `supabase_uid`) " +
+                    "SELECT `id`, `correo`, `nombre_completo`, `password_hash`, `password_salt`, `rol`, `telefono`, `foto_uri`, `fecha_registro`, `supabase_uid` " +
+                    "FROM `usuarios`");
+
+            database.execSQL("DROP TABLE `usuarios`");
+
+            database.execSQL("ALTER TABLE `usuarios_nueva` RENAME TO `usuarios`");
+        }
+    };
+
     public abstract UsuarioDao      usuarioDao();
+    public abstract VendedorDao     vendedorDao();
+    public abstract ClienteDao      clienteDao();
     public abstract CatalogoDao     catalogoDao();
     public abstract ProductoDao     productoDao();
     public abstract ReporteDao      reporteDao();
@@ -65,7 +120,7 @@ public abstract class AppDatabase extends RoomDatabase {
                             context.getApplicationContext(),
                             AppDatabase.class,
                             DB_NAME
-                    ).addMigrations(MIGRATION_1_2).build();
+                    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build();
                 }
             }
         }

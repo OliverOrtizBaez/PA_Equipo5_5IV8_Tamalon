@@ -7,6 +7,9 @@ public class MiPlanResponse {
     @SerializedName("rol")
     public String rol;
 
+    @SerializedName("tipo")
+    public String tipo;
+
     @SerializedName("plan")
     public String plan;
 

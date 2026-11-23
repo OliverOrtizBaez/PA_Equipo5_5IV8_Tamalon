@@ -20,6 +20,7 @@ import com.tamalon.app.network.MiPlanResponse;
 import com.tamalon.app.network.TokenStore;
 import com.tamalon.app.payment.PagoService;
 import com.tamalon.app.payment.PagoServiceFactory;
+import com.tamalon.app.repository.UsuarioRepository;
 import com.tamalon.app.service.AutenticacionService;
 import java.util.concurrent.Executors;
 import retrofit2.Call;
@@ -185,7 +186,7 @@ public class PagoActivity extends AppCompatActivity {
             public void onResponse(@NonNull Call<MiPlanResponse> call, @NonNull Response<MiPlanResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     MiPlanResponse planResp = response.body();
-                    tokenStore.updatePlanAndRol(planResp.plan, planResp.rol);
+                    tokenStore.updatePlanRolTipo(planResp.plan, planResp.rol, planResp.tipo);
                 } else {
                     tokenStore.updatePlanAndRol("premium", null);
                 }
@@ -218,7 +219,7 @@ public class PagoActivity extends AppCompatActivity {
                 } else {
                     db.suscripcionDao().actualizarPlan(id, Suscripcion.PLAN_PREMIUM, "aprobado_simulado", ahora);
                 }
-                db.usuarioDao().actualizarPlan(id, "premium");
+                new UsuarioRepository(getApplicationContext()).actualizarPlan(id, "premium");
             }
         });
     }

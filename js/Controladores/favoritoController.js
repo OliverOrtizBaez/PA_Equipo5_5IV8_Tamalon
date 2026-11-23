@@ -4,7 +4,7 @@ const { ErrorHttp, asyncHandler } = require('../utils/errores');
 const { entero } = require('../utils/validaciones');
 
 function validarClientePremium(req) {
-  if (req.usuario.rol !== C.ROLES.CLIENTE_PREMIUM) {
+  if (req.usuario.tipo !== C.TIPOS.CLIENTE || req.usuario.plan !== C.PLANES.PREMIUM) {
     throw new ErrorHttp(403, 'Los favoritos están disponibles para cuentas de cliente Premium');
   }
 }
@@ -45,18 +45,18 @@ const agregarFavorito = asyncHandler(async (req, res) => {
 
   const resultado = await transaccion(async (conn) => {
     const [[cliente]] = await conn.query(
-      'SELECT rol FROM usuarios WHERE id_usuario = ? FOR UPDATE',
+      'SELECT plan FROM cliente WHERE id_cliente = ? FOR UPDATE',
       [req.usuario.id]
     );
-    if (!cliente || cliente.rol !== C.ROLES.CLIENTE_PREMIUM) {
+    if (!cliente || cliente.plan !== C.PLANES.PREMIUM) {
       throw new ErrorHttp(403, 'Los favoritos están disponibles para cuentas de cliente Premium');
     }
 
     const [[vendedor]] = await conn.query(
-      'SELECT rol FROM usuarios WHERE id_usuario = ? LIMIT 1',
+      'SELECT 1 AS existe FROM vendedor WHERE id_vendedor = ? LIMIT 1',
       [idVendedor]
     );
-    if (!vendedor || ![C.ROLES.VENDEDOR_GRATUITO, C.ROLES.VENDEDOR_PREMIUM].includes(vendedor.rol)) {
+    if (!vendedor) {
       throw new ErrorHttp(404, 'No se encontró una cuenta de vendedor con ese identificador');
     }
 
