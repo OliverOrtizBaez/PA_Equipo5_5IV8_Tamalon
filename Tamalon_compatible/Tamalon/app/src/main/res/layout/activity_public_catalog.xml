@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Catálogo público del Vendedor visto por el Cliente (RF12).
+     Gratuito: nombre, imagen, categoría.   Premium: + precio + descripción. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/tamalon_background"
+    android:orientation="vertical">
+
+    <!-- Barra superior -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="@dimen/screen_horizontal"
+        android:paddingTop="@dimen/screen_top"
+        android:paddingBottom="8dp">
+
+        <TextView
+            android:id="@+id/catalog_vendor_name"
+            style="@style/Tamalon.SectionTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Catálogo del vendedor"
+            android:textColor="@color/tamalon_ink"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/catalog_plan_badge"
+            style="@style/Tamalon.Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_badge"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="4dp"
+            android:text="Gratuito"
+            android:textColor="@color/tamalon_field_text"
+            android:textSize="8.5sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- Aviso plan gratuito (visible si el cliente no es premium) -->
+    <TextView
+        android:id="@+id/catalog_upgrade_notice"
+        style="@style/Tamalon.Caption"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="@dimen/screen_horizontal"
+        android:layout_marginBottom="6dp"
+        android:background="@drawable/bg_badge_yellow"
+        android:gravity="center"
+        android:padding="10dp"
+        android:text="Plan Gratuito: ves nombre, imagen y categoría. Precio y descripción disponibles en Premium."
+        android:textColor="#5A4622"
+        android:textSize="9sp"
+        android:visibility="gone" />
+
+    <!-- Lista de productos -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/catalog_recycler"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:paddingHorizontal="@dimen/screen_horizontal"
+        android:paddingTop="8dp"
+        android:paddingBottom="24dp"
+        android:clipToPadding="false" />
+
+    <!-- Estado vacío -->
+    <LinearLayout
+        android:id="@+id/catalog_empty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="@dimen/screen_horizontal"
+        android:background="@drawable/bg_empty"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="28dp"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:contentDescription="Sin catálogos"
+            android:src="@drawable/ic_list" />
+
+        <TextView
+            android:id="@+id/catalog_empty_text"
+            style="@style/Tamalon.Body"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center"
+            android:text="Este Vendedor aún no tiene catálogos"
+            android:textColor="@color/tamalon_ink"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+</LinearLayout>
