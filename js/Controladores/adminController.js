@@ -7,6 +7,7 @@ const { validar, entero } = require('../utils/validaciones');
 const F = require('../utils/fechas');
 const { crearCuenta } = require('../services/cuentasService');
 const S = require('../services/suscripcionService');
+const sesiones = require('../services/sesionesService');
 
 const parseId = (valor) => {
   const id = entero(valor);
@@ -272,6 +273,7 @@ const suspenderIndefinidamente = asyncHandler(async (req, res) => {
       [C.ESTADOS_CUENTA.SUSPENDIDA_INDEF, id]);
     await marcarFueraDeRutaSiVendedor(conn, u.tipo, id);
   });
+  await sesiones.revocarUsuario(id, 'suspendido'); // lo saca en el acto, sin esperar su siguiente peticion
   res.json({ mensaje: 'Usuario suspendido indefinidamente' });
 });
 
@@ -291,6 +293,7 @@ const suspenderTemporalmente = asyncHandler(async (req, res) => {
       [C.ESTADOS_CUENTA.SUSPENDIDA_TEMP, fin, id]);
     await marcarFueraDeRutaSiVendedor(conn, u.tipo, id);
   });
+  await sesiones.revocarUsuario(id, 'suspendido');
   res.json({ mensaje: `Usuario suspendido por ${dias} día(s)`, fin_suspension: fin.toISOString() });
 });
 

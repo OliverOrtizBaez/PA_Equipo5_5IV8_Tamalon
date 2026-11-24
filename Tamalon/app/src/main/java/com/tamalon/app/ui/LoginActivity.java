@@ -35,6 +35,29 @@ public class LoginActivity extends AppCompatActivity {
         btnEntrar.setOnClickListener(v -> intentarLogin());
         btnRegistrar.setOnClickListener(v -> abrirRegistro());
         btnOlvide.setOnClickListener(v -> abrirRecuperacion());
+
+        procesarMensajeSesion(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        procesarMensajeSesion(intent);
+    }
+
+    private void procesarMensajeSesion(Intent intent) {
+        if (intent != null && intent.hasExtra("mensaje_sesion")) {
+            String mensaje = intent.getStringExtra("mensaje_sesion");
+            intent.removeExtra("mensaje_sesion");
+            if (mensaje != null && !mensaje.trim().isEmpty()) {
+                new androidx.appcompat.app.AlertDialog.Builder(this)
+                        .setTitle("Sesión finalizada")
+                        .setMessage(mensaje)
+                        .setPositiveButton("Aceptar", null)
+                        .show();
+            }
+        }
     }
 
     private void intentarLogin() {

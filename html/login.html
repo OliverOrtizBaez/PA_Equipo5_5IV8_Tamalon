@@ -100,6 +100,7 @@
         </section>
     </main>
 
+    <script src="./sesion-ws.js"></script>
     <script>
         const loginPanel = document.getElementById('login-panel');
         const recoveryPanel = document.getElementById('recovery-panel');
@@ -147,7 +148,8 @@
             mostrarMensaje(loginMessage, '');
 
             try {
-                const resultado = await enviarSolicitud('/api/auth/login', {
+                // Login por WebSocket (/ws/auth); si no hay WebSocket cae al login HTTP. Ver html/sesion-ws.js
+                const resultado = await TamalonSesion.login({
                     correo: formulario.elements.correo.value.trim(),
                     contrasena: formulario.elements.contrasena.value,
                     zona_horaria: Intl.DateTimeFormat().resolvedOptions().timeZone,

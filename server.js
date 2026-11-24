@@ -1,5 +1,6 @@
 require('dotenv').config();
 const path = require('path');
+const http = require('http');
 const express = require('express');
 const cors = require('cors');
 
@@ -15,6 +16,10 @@ const contactoRoutes = require('./js/routes/contactoRoutes');
 const ubicacionRoutes = require('./js/routes/ubicacionRoutes');
 const { noEncontrado, manejadorErrores } = require('./js/middlewares/errores');
 const { iniciarJobs } = require('./js/jobs');
+const { iniciarWebSocket } = require('./js/ws/authSocket');
+const { asegurarSecreto } = require('./js/utils/jwt');
+
+asegurarSecreto(); // falla al arrancar (no en el primer login) si falta JWT_SECRET
 
 const app = express(); 
 app.disable('x-powered-by');
@@ -52,8 +57,12 @@ app.get('/terminos_condiciones.html', (req, res) => res.sendFile(path.join(__dir
 
 app.use(manejadorErrores);
 
+// Express y el canal WebSocket (/ws/auth) comparten servidor HTTP y puerto
+const servidor = http.createServer(app);
+iniciarWebSocket(servidor);
+
 const PORT = Number(process.env.PORT || 3000);
-app.listen(PORT, () => {
+servidor.listen(PORT, () => {
   console.log(`Tamalon escuchando en el puerto ${PORT}`);
   iniciarJobs();
 });

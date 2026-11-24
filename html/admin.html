@@ -311,6 +311,7 @@
         </section>
     </main>
 
+    <script src="./sesion-ws.js"></script>
     <script>
         const API_BASE = location.origin;
         const API_URL = `${API_BASE}/api/admin`;
@@ -645,7 +646,22 @@
             } catch (error) { avisar(error); }
         }
 
+        // Canal WebSocket de sesion: el servidor avisa en el acto si la sesion se revoca
+        // (suspension, contrasena cambiada, logout en otra pestana o expiracion), sin esperar una peticion.
+        let canalSesion = null;
+        function iniciarCanalSesion() {
+            canalSesion = TamalonSesion.escuchar({
+                getToken,
+                onRevocada: (motivo, mensaje) => {
+                    if (motivo !== 'logout') alert(mensaje || 'Sesión no válida. Inicia sesión de nuevo');
+                    localStorage.removeItem('token');
+                    window.location.href = LOGIN_URL;
+                }
+            });
+        }
+
         function cerrarSesion() {
+            if (canalSesion) canalSesion.cerrar(); // evita que el aviso de este mismo logout dispare otra alerta
             // Avisa al servidor para invalidar el token (si falla, igual se limpia localmente)
             fetch(`${API_BASE}/api/auth/logout`, {
                 method: 'POST',
@@ -661,6 +677,7 @@
             document.getElementById('fecha-trafico').value = new Date().toLocaleDateString('en-CA'); // AAAA-MM-DD local
             cargarSuscripciones();
             cargarGraficoTrafico();
+            iniciarCanalSesion();
         };
     </script>
 </body>

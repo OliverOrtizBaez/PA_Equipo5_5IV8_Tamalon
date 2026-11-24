@@ -3,12 +3,12 @@ const C = require('../config/constantes');
 const MSG = require('../utils/mensajes');
 const { ErrorHttp, ErrorValidacion, asyncHandler } = require('../utils/errores');
 const { validar, validarContrasenaConConfirmacion, mensajeInvalido, normalizarCorreo } = require('../utils/validaciones');
-const { sumarMinutos, sumarDias, zonaValida } = require('../utils/fechas');
+const { sumarMinutos } = require('../utils/fechas');
 const { generarToken, hashToken } = require('../utils/tokens');
-const { comparar, compararFalso, hashear } = require('../utils/contrasenas');
+const { comparar, hashear } = require('../utils/contrasenas');
 const { enviarRecuperacion } = require('../utils/correo');
 const { crearCuenta } = require('../services/cuentasService');
-const { reactivarSiVencio } = require('../middlewares/autenticacion');
+const sesiones = require('../services/sesionesService');
 
 const registrarVendedor = asyncHandler(async (req, res) => {
   const cuenta = await crearCuenta(req.body, C.TIPOS.VENDEDOR);
@@ -20,101 +20,15 @@ const registrarCliente = asyncHandler(async (req, res) => {
   res.status(201).json({ mensaje: 'Cuenta creada', usuario: cuenta });
 });
 
+// El login real vive en sesionesService.iniciarSesion (lo comparte con el canal WebSocket /ws/auth).
+// El campo "token" ahora es un JWT, pero se sigue enviando como Bearer: los clientes no cambian.
 const login = asyncHandler(async (req, res) => {
-  const { correo, contrasena, zona_horaria } = req.body || {};
-  const rechazar = () => res.status(401).json({ mensaje: MSG.CREDENCIALES_INCORRECTAS });
-
-  if (typeof correo !== 'string' || typeof contrasena !== 'string' || correo.length > 100 || contrasena.length > 64) {
-    return rechazar();
-  }
-
-  const [filas] = await pool.query(
-    `SELECT u.id_usuario, u.nombre_completo, u.correo, u.telefono, u.foto_perfil, u.contrasena,
-            u.tipo, u.plan, u.rol, u.estado_cuenta, u.zona_horaria,
-            COALESCE(ca.intentos_fallidos, 0) AS intentos_fallidos, ca.ultimo_intento
-       FROM vw_usuario u
-       LEFT JOIN control_acceso ca ON ca.id_usuario = u.id_usuario
-      WHERE u.correo = ? LIMIT 1`,
-    [normalizarCorreo(correo)]
-  );
-  const u = filas[0];
-  if (!u) {
-    await compararFalso(contrasena);
-    return rechazar();
-  }
-
-  const ahora = new Date();
-
-  if (u.intentos_fallidos >= C.MAX_INTENTOS_LOGIN && u.ultimo_intento) {
-    const finBloqueo = sumarMinutos(new Date(u.ultimo_intento), C.BLOQUEO_MIN);
-    if (ahora < finBloqueo) return res.status(429).json({ mensaje: MSG.BLOQUEO_TEMPORAL });
-  }
-
-  if (!(await comparar(contrasena, u.contrasena))) {
-    const limiteVentana = sumarMinutos(ahora, -C.VENTANA_INTENTOS_MIN);
-    await pool.query(
-      `INSERT INTO control_acceso (id_usuario, intentos_fallidos, inicio_intentos, ultimo_intento)
-       VALUES (?, 1, ?, ?)
-       ON DUPLICATE KEY UPDATE
-         intentos_fallidos = IF(inicio_intentos IS NULL OR inicio_intentos < ?, 1, intentos_fallidos + 1),
-         inicio_intentos   = IF(inicio_intentos IS NULL OR inicio_intentos < ?, VALUES(inicio_intentos), inicio_intentos),
-         ultimo_intento    = VALUES(ultimo_intento)`,
-      [u.id_usuario, ahora, ahora, limiteVentana, limiteVentana]
-    );
-    return rechazar();
-  }
-
-  let estado = u.estado_cuenta;
-  if (estado === C.ESTADOS_CUENTA.SUSPENDIDA_TEMP && (await reactivarSiVencio(u.id_usuario))) {
-    estado = C.ESTADOS_CUENTA.ACTIVA;
-  }
-  if (estado !== C.ESTADOS_CUENTA.ACTIVA) {
-    return res.status(403).json({ mensaje: MSG.USUARIO_SUSPENDIDO }); 
-  }
-
-  const zona = zonaValida(zona_horaria) ? zona_horaria : u.zona_horaria;
-
-  const token = generarToken();
-  const expira = sumarDias(ahora, C.SESION_DIAS);
-  await pool.query(
-    'UPDATE control_acceso SET intentos_fallidos = 0, inicio_intentos = NULL, ultimo_intento = NULL WHERE id_usuario = ?',
-    [u.id_usuario]
-  );
-  await pool.query(
-    'UPDATE usuarios SET zona_horaria = ? WHERE id_usuario = ?',
-    [zona, u.id_usuario]
-  );
-  await pool.query(
-    'INSERT INTO sesion (id_usuario, token, fech_hrs_login, fecha_expiracion) VALUES (?, ?, ?, ?)',
-    [u.id_usuario, hashToken(token), ahora, expira]
-  );
-
-  try {
-    await pool.query('INSERT INTO registro_login (id_usuario, fech_hrs) VALUES (?, ?)', [u.id_usuario, ahora]);
-  } catch (err) {
-    console.error('[registro_login] no se pudo guardar el inicio de sesión:', err.message);
-  }
-
-  res.json({
-    token,
-    expira: expira.toISOString(),
-    usuario: {
-      id_usuario: u.id_usuario,
-      nombre_completo: u.nombre_completo,
-      correo: u.correo,
-      telefono: u.telefono,
-      foto_perfil: u.foto_perfil,
-      rol: u.rol,
-      tipo: u.tipo,
-      plan: u.plan,
-      estado_cuenta: estado,
-      zona_horaria: zona,
-    },
-  });
+  const { token, expira, usuario } = await sesiones.iniciarSesion(req.body || {});
+  res.json({ token, expira, usuario });
 });
 
 const logout = asyncHandler(async (req, res) => {
-  await pool.query('DELETE FROM sesion WHERE id_sesion = ?', [req.idSesion]);
+  await sesiones.cerrarSesion({ idUsuario: req.usuario.id, idSesion: req.idSesion, jti: req.jti });
   res.json({ mensaje: 'Sesión cerrada' });
 });
 
@@ -189,8 +103,10 @@ const restablecerContrasena = asyncHandler(async (req, res) => {
 
     await conn.query('UPDATE usuarios SET contrasena = ? WHERE id_usuario = ?', [nuevoHash, r.id_usuario]);
     await conn.query('UPDATE recuperacion_pass SET valido = 0 WHERE id_usuario = ?', [r.id_usuario]);
-    await conn.query('DELETE FROM sesion WHERE id_usuario = ?', [r.id_usuario]);                      
+    await conn.query('DELETE FROM sesion WHERE id_usuario = ?', [r.id_usuario]);
   });
+  // La transaccion ya borro las sesiones; aqui se expulsa en vivo a quien las tenga abiertas
+  sesiones.expulsarConexiones(r.id_usuario, 'contrasena_cambiada');
 
   res.json({ mensaje: 'Contraseña actualizada. Inicia sesión con tu nueva contraseña' });
 });

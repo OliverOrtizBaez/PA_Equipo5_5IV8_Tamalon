@@ -111,6 +111,7 @@ public class AutenticacionService {
                 if (response.isSuccessful() && response.body() != null) {
                     LoginResponse lr = response.body();
                     tokenStore.saveSession(lr.token, lr.expira, lr.usuario);
+                    SesionSocket.getInstance(context).conectar();
 
                     Usuario localUser = dtoToLocalUsuario(lr.usuario);
                     executor.execute(() -> {
@@ -146,6 +147,7 @@ public class AutenticacionService {
         } catch (Exception e) {
             // ignore
         }
+        SesionSocket.getInstance(context).desconectar();
         tokenStore.clearSession();
     }
 
