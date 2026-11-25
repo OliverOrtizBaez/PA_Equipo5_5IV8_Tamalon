@@ -133,3 +133,12 @@ te resumo en 5 líneas qué hizo, qué falta y si choca con la otra.
 5. Cliente no ve nada de Premium; puede guardar favoritos.
 6. Admin abre Usuarios → ve **todos** de la A a la Z; Estadísticas muestra conversión e ingresos = pagos × 50.
 7. Ninguna pantalla, texto ni categoría menciona tamales.
+
+## 7. Subida de imágenes
+- `POST /api/imagenes` requiere `Authorization: Bearer <token>` y acepta cualquier rol autenticado.
+- Enviar `multipart/form-data` con un archivo `imagen` y `destino` igual a `productos` o `perfiles`.
+- Formatos: JPEG, PNG, WebP o HEIC; se validan MIME y firma binaria. Límite de 8 MiB por archivo y 20 solicitudes por usuario cada 10 minutos.
+- La imagen se guarda en `tamalon/productos` o `tamalon/perfiles`, con reducción limitada a 1280 px y calidad/formato automáticos.
+- Respuesta exitosa: `201 {"url":"https://res.cloudinary.com/<cloud_name>/..."}`.
+- Errores: `400` archivo/campos/formato inválidos; `413` archivo mayor a 8 MiB; `429` límite excedido; `502` fallo de Cloudinary; `503` si `CLOUDINARY_URL` no está configurada.
+- Los campos `imagen` y `foto_perfil` solo aceptan URL HTTPS bajo `res.cloudinary.com`, con nombre de cloud válido y hasta 2048 caracteres.

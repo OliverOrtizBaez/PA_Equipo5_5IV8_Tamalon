@@ -29,7 +29,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
                 android:gravity="center"
-                android:text="Descubre antojitos cerca de ti" />
+                android:text="Descubre vendedores cerca de ti" />
             <TextView
                 style="@style/Tamalon.Body"
                 android:layout_width="match_parent"
@@ -252,7 +252,7 @@
             android:layout_marginStart="8dp"
             android:layout_weight="1"
             android:background="@color/tamalon_transparent"
-            android:hint="Buscar puestos o antojitos..."
+            android:hint="Buscar puestos o vendedores..."
             android:imeOptions="actionSearch"
             android:inputType="textCapSentences"
             android:paddingHorizontal="0dp"
@@ -262,7 +262,7 @@
             android:textSize="10sp" />
     </LinearLayout>
 
-    <!-- Preferencias y filtros de antojitos: ubicado abajo del buscador -->
+    <!-- Preferencias y filtros de vendedores: ubicado abajo del buscador -->
     <HorizontalScrollView
         android:id="@+id/map_category_scroll"
         android:layout_width="match_parent"
@@ -503,7 +503,7 @@
                     style="@style/Tamalon.Body"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Puesto de Antojitos"
+                    android:text="Puesto de Vendedor"
                     android:textSize="13sp"
                     android:textStyle="bold" />
 
@@ -537,7 +537,7 @@
             android:layout_marginTop="8dp"
             android:ellipsize="end"
             android:maxLines="2"
-            android:text="Especialidad en tamales verdes, de dulce, oaxaqueños y atole caliente de masa y champurrado."
+            android:text="Especialidad en productos frescos y de calidad disponibles al día."
             android:textColor="@color/tamalon_field_text"
             android:textSize="9sp" />
 

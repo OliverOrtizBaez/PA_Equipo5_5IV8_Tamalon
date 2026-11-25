@@ -3,6 +3,21 @@
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const NOMBRE_RE = /^\p{L}[\p{L} .'’-]*$/u;       // letras, espacios, punto, apostrofe y guion; sin digitos
 
+function esUrlCloudinary(valor) {
+  if (typeof valor !== 'string' || valor.length > 2048 || valor !== valor.trim()) return false;
+  let url;
+  try { url = new URL(valor); } catch (_) { return false; }
+  const segmentos = url.pathname.split('/');
+  return url.protocol === 'https:' &&
+    url.hostname === 'res.cloudinary.com' &&
+    !url.port &&
+    !url.username &&
+    !url.password &&
+    /^[a-z0-9][a-z0-9_-]*$/.test(segmentos[1] || '') &&
+    segmentos.length > 2 &&
+    segmentos.slice(2).some(Boolean);
+}
+
 const REGLAS = {
   correo: {                                       // RV-01
     etiqueta: 'Correo',
@@ -51,6 +66,16 @@ const REGLAS = {
       return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v;
     },
   },
+  imagen: {
+    etiqueta: 'Imagen',
+    regla: 'URL HTTPS de Cloudinary de hasta 2048 caracteres',
+    ok: (v) => v === null || v === '' || esUrlCloudinary(v),
+  },
+  foto_perfil: {
+    etiqueta: 'Foto de perfil',
+    regla: 'URL HTTPS de Cloudinary de hasta 2048 caracteres',
+    ok: (v) => v === null || v === '' || esUrlCloudinary(v),
+  },
 };
 
 const mensajeInvalido = (etiqueta, regla) => `Dato inválido en ${etiqueta}: ${regla}`;
@@ -87,4 +112,7 @@ function entero(valor, { min = 1, max = 2147483647 } = {}) {
   return n >= min && n <= max ? n : null;
 }
 
-module.exports = { REGLAS, validar, validarContrasenaConConfirmacion, mensajeInvalido, normalizarCorreo, entero };
+module.exports = {
+  REGLAS, validar, validarContrasenaConConfirmacion, mensajeInvalido,
+  normalizarCorreo, entero, esUrlCloudinary,
+};

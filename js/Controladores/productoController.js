@@ -1,7 +1,7 @@
 const { pool, transaccion } = require('../config/db');
 const C = require('../config/constantes');
 const { ErrorHttp, ErrorValidacion, asyncHandler } = require('../utils/errores');
-const { entero } = require('../utils/validaciones');
+const { entero, esUrlCloudinary } = require('../utils/validaciones');
 
 function idValido(valor, etiqueta = 'Identificador') {
   const id = entero(valor);
@@ -36,17 +36,10 @@ function validarPrecio(valor) {
 
 function validarImagen(valor) {
   if (valor === null || valor === '') return null;
-  if (typeof valor !== 'string' || valor.length > 2048) {
-    throw new ErrorValidacion(['Dato inválido en Imagen: debe ser una URL HTTPS de hasta 2048 caracteres']);
+  if (!esUrlCloudinary(valor)) {
+    throw new ErrorValidacion(['Dato inválido en Imagen: debe ser una URL HTTPS de Cloudinary de hasta 2048 caracteres']);
   }
-  let url;
-  try { url = new URL(valor); } catch (_) {
-    throw new ErrorValidacion(['Dato inválido en Imagen: debe ser una URL HTTPS válida']);
-  }
-  if (url.protocol !== 'https:') {
-    throw new ErrorValidacion(['Dato inválido en Imagen: solo se permiten URL HTTPS']);
-  }
-  return url.toString();
+  return valor;
 }
 
 function validarCategoria(valor) {
@@ -213,4 +206,4 @@ const eliminarProducto = asyncHandler(async (req, res) => {
   res.status(204).end();
 });
 
-module.exports = { obtenerPorCatalogo, crearProducto, actualizarProducto, eliminarProducto };
+module.exports = { obtenerPorCatalogo, crearProducto, actualizarProducto, eliminarProducto, validarImagen };

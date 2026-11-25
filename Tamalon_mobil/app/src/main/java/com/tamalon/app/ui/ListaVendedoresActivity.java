@@ -49,8 +49,8 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 /**
- * Pantalla de búsqueda de vendedores y antojitos de la zona conectada a la API.
- * Soporta modo oscuro, filtros por preferencias compartidas con el Mapa y toggle de favoritos.
+ * Pantalla de búsqueda de vendedores de la zona conectada a la API.
+ * Soporta modo oscuro, filtros dinámicos por tipo de vendedor y toggle de favoritos.
  */
 public class ListaVendedoresActivity extends AppCompatActivity {
 
@@ -65,10 +65,8 @@ public class ListaVendedoresActivity extends AppCompatActivity {
     private String plan = "gratuito";
     private String filtroTexto = "";
 
-    private final String[] categorias = {
-            "Todos", "Tamales", "Atole", "Quesadillas", "Pambazos", "Sopes", "Champurrado"
-    };
-    private final Set<String> filtrosAntojitos = new LinkedHashSet<>();
+    private final List<TipoVendedorDto> listaTipos = new ArrayList<>();
+    private Integer idTipoVendedorSeleccionado = null;
 
     private ScrollView scrollView;
     private LinearLayout resultsContainer;
@@ -171,16 +169,14 @@ public class ListaVendedoresActivity extends AppCompatActivity {
             @Override public void afterTextChanged(Editable e) {}
         });
 
-        cargarPreferenciasGuardadas();
-        construirChipsCategorias();
+        cargarTiposVendedor();
         sincronizarUsuarioYCargar();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        cargarPreferenciasGuardadas();
-        construirChipsCategorias();
+        cargarTiposVendedor();
         cargarFavoritos();
         render();
     }
@@ -194,8 +190,7 @@ public class ListaVendedoresActivity extends AppCompatActivity {
                     if (u.rol != null) rol = u.rol;
                     if (u.plan != null) plan = u.plan;
                     BottomNavigation.configurar(ListaVendedoresActivity.this, findViewById(android.R.id.content), usuarioId, rol, plan);
-                    cargarPreferenciasGuardadas();
-                    construirChipsCategorias();
+                    cargarTiposVendedor();
                     cargarFavoritos();
                     cargarVendedoresDeApi();
                 });
@@ -204,6 +199,7 @@ public class ListaVendedoresActivity extends AppCompatActivity {
             @Override
             public void onError(String m) {
                 runOnUiThread(() -> {
+                    cargarTiposVendedor();
                     cargarFavoritos();
                     cargarVendedoresDeApi();
                 });
@@ -211,24 +207,22 @@ public class ListaVendedoresActivity extends AppCompatActivity {
         });
     }
 
-    private void cargarPreferenciasGuardadas() {
-        filtrosAntojitos.clear();
-        if (usuarioId > 0) {
-            SharedPreferences prefs = getSharedPreferences("tamalon_map_filters_" + usuarioId, MODE_PRIVATE);
-            Set<String> guardadas = prefs.getStringSet("categorias", null);
-            if (guardadas != null) {
-                filtrosAntojitos.addAll(guardadas);
+    private void cargarTiposVendedor() {
+        apiService.obtenerTiposVendedor().enqueue(new Callback<List<TipoVendedorDto>>() {
+            @Override
+            public void onResponse(@NonNull Call<List<TipoVendedorDto>> call, @NonNull Response<List<TipoVendedorDto>> response) {
+                listaTipos.clear();
+                if (response.isSuccessful() && response.body() != null) {
+                    listaTipos.addAll(response.body());
+                }
+                construirChipsTipos();
             }
-        }
-    }
 
-    private void guardarPreferencias() {
-        if (usuarioId > 0) {
-            getSharedPreferences("tamalon_map_filters_" + usuarioId, MODE_PRIVATE)
-                    .edit()
-                    .putStringSet("categorias", new HashSet<>(filtrosAntojitos))
-                    .apply();
-        }
+            @Override
+            public void onFailure(@NonNull Call<List<TipoVendedorDto>> call, @NonNull Throwable t) {
+                construirChipsTipos();
+            }
+        });
     }
 
     private void cargarFavoritos() {
@@ -263,7 +257,7 @@ public class ListaVendedoresActivity extends AppCompatActivity {
                             if (idVend > 0) {
                                 apiIds.add(idVend);
                                 String nombre = f.nombreVendedor != null ? f.nombreVendedor
-                                        : (f.vendedor != null && f.vendedor.nombreCompleto != null ? f.vendedor.nombreCompleto : "Puesto de Antojitos");
+                                        : (f.vendedor != null && f.vendedor.nombreCompleto != null ? f.vendedor.nombreCompleto : "Puesto de Vendedor");
                                 String foto = f.fotoPerfil != null ? f.fotoPerfil
                                         : (f.vendedor != null ? f.vendedor.fotoPerfil : null);
                                 if (ed != null) {
@@ -300,7 +294,7 @@ public class ListaVendedoresActivity extends AppCompatActivity {
 
     private void cargarVendedoresDeApi() {
         String buscarParam = filtroTexto.isEmpty() ? null : filtroTexto;
-        apiService.obtenerVendedores(null, buscarParam, 1, 50).enqueue(new Callback<VendedoresListaResponse>() {
+        apiService.obtenerVendedores(idTipoVendedorSeleccionado, buscarParam, 1, 50).enqueue(new Callback<VendedoresListaResponse>() {
             @Override
             public void onResponse(@NonNull Call<VendedoresListaResponse> call, @NonNull Response<VendedoresListaResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {
@@ -381,52 +375,36 @@ public class ListaVendedoresActivity extends AppCompatActivity {
         }
     }
 
-    private void construirChipsCategorias() {
+    private void construirChipsTipos() {
         if (categoryFiltersContainer == null) return;
         categoryFiltersContainer.removeAllViews();
 
-        for (String cat : categorias) {
-            Button chip = new Button(this);
-            chip.setText(cat);
-            chip.setAllCaps(false);
-            chip.setTextSize(11f);
-            chip.setTypeface(null, Typeface.BOLD);
-            chip.setMinHeight(0);
-            chip.setMinimumHeight(0);
-            chip.setMinWidth(0);
-            chip.setMinimumWidth(0);
-            chip.setPadding(dp(14), dp(4), dp(14), dp(4));
-
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT, dp(38));
-            lp.setMargins(dp(4), 0, dp(4), 0);
-            chip.setLayoutParams(lp);
-
-            actualizarEstiloChip(chip, cat);
-
-            chip.setOnClickListener(v -> {
-                if ("Todos".equalsIgnoreCase(cat)) {
-                    filtrosAntojitos.clear();
-                } else {
-                    if (filtrosAntojitos.contains(cat)) {
-                        filtrosAntojitos.remove(cat);
-                    } else {
-                        filtrosAntojitos.add(cat);
-                    }
-                }
-                guardarPreferencias();
-                construirChipsCategorias();
-                render();
-            });
-
-            categoryFiltersContainer.addView(chip);
+        agregarChipTipo("Todos", null);
+        for (TipoVendedorDto tipo : listaTipos) {
+            agregarChipTipo(tipo.nombre, tipo.idTipoVendedor);
         }
     }
 
-    private void actualizarEstiloChip(Button chip, String cat) {
-        boolean activa = "Todos".equalsIgnoreCase(cat)
-                ? filtrosAntojitos.isEmpty()
-                : contieneIgnoreCase(filtrosAntojitos, cat);
+    private void agregarChipTipo(String nombre, Integer idTipo) {
+        Button chip = new Button(this);
+        chip.setText(nombre);
+        chip.setAllCaps(false);
+        chip.setTextSize(11f);
+        chip.setTypeface(null, Typeface.BOLD);
+        chip.setMinHeight(0);
+        chip.setMinimumHeight(0);
+        chip.setMinWidth(0);
+        chip.setMinimumWidth(0);
+        chip.setPadding(dp(14), dp(4), dp(14), dp(4));
+
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, dp(38));
+        lp.setMargins(dp(4), 0, dp(4), 0);
+        chip.setLayoutParams(lp);
+
+        boolean activa = (idTipo == null && idTipoVendedorSeleccionado == null) ||
+                (idTipo != null && idTipo.equals(idTipoVendedorSeleccionado));
+
         int colorFondo = activa ? getColor(R.color.tamalon_sand_strong) : getColor(R.color.tamalon_surface);
         int colorTexto = activa ? getColor(R.color.tamalon_ink) : getColor(R.color.tamalon_field_text);
         int colorBorde = activa ? getColor(R.color.tamalon_heading_muted) : getColor(R.color.tamalon_line);
@@ -442,13 +420,14 @@ public class ListaVendedoresActivity extends AppCompatActivity {
         chip.setBackgroundTintList(null);
         chip.setTextColor(colorTexto);
         chip.setElevation(activa ? dp(2) : 0);
-    }
 
-    private boolean contieneIgnoreCase(Set<String> set, String target) {
-        for (String item : set) {
-            if (item != null && item.equalsIgnoreCase(target)) return true;
-        }
-        return false;
+        chip.setOnClickListener(v -> {
+            idTipoVendedorSeleccionado = idTipo;
+            construirChipsTipos();
+            cargarVendedoresDeApi();
+        });
+
+        categoryFiltersContainer.addView(chip);
     }
 
     private boolean coincideConFiltros(VendedorListaDto u) {
@@ -466,18 +445,6 @@ public class ListaVendedoresActivity extends AppCompatActivity {
                     || catsLower.contains(filtroTexto)
                     || prodsLower.contains(filtroTexto);
             if (!matchTexto) return false;
-        }
-
-        if (!filtrosAntojitos.isEmpty()) {
-            boolean matchPref = false;
-            for (String pref : filtrosAntojitos) {
-                String pLower = pref.toLowerCase(Locale.ROOT);
-                if (catsLower.contains(pLower) || nombreLower.contains(pLower) || prodsLower.contains(pLower)) {
-                    matchPref = true;
-                    break;
-                }
-            }
-            if (!matchPref) return false;
         }
         return true;
     }
@@ -520,7 +487,7 @@ public class ListaVendedoresActivity extends AppCompatActivity {
             info.setOrientation(LinearLayout.VERTICAL);
 
             TextView tvName = new TextView(this);
-            String baseName = u.nombreCompleto == null ? "Puesto de Antojitos" : u.nombreCompleto;
+            String baseName = u.nombreCompleto == null ? "Puesto de Vendedor" : u.nombreCompleto;
             tvName.setText(esFav ? "♥ " + baseName : baseName);
             tvName.setTextColor(getColor(R.color.tamalon_ink));
             tvName.setTextSize(14f);
@@ -529,7 +496,7 @@ public class ListaVendedoresActivity extends AppCompatActivity {
 
             TextView tvSub = new TextView(this);
             String cats = categoriasPorVendedor.get(u.idUsuario);
-            String especialidad = (cats != null && !cats.isEmpty()) ? cats : "Especialidad en antojitos";
+            String especialidad = (cats != null && !cats.isEmpty()) ? cats : "Especialidad de la casa";
             tvSub.setText(especialidad + (u.enRuta ? " · En ruta activa" : " · Fuera de ruta"));
             tvSub.setTextColor(getColor(R.color.tamalon_muted));
             tvSub.setTextSize(10f);
@@ -572,7 +539,7 @@ public class ListaVendedoresActivity extends AppCompatActivity {
         if (selectedCard == null) return;
 
         if (tvSelectedName != null) {
-            tvSelectedName.setText(vendedor.nombreCompleto == null ? "Puesto de Antojitos" : vendedor.nombreCompleto);
+            tvSelectedName.setText(vendedor.nombreCompleto == null ? "Puesto de Vendedor" : vendedor.nombreCompleto);
         }
         if (ivSelectedAvatar != null) {
             ImagenPerfil.mostrar(ivSelectedAvatar, vendedor.fotoPerfil, this);
@@ -585,7 +552,7 @@ public class ListaVendedoresActivity extends AppCompatActivity {
             if (cats != null && !cats.isEmpty()) {
                 tvSelectedDesc.setText("Ofrece: " + cats + ". Consulta el catálogo para ver productos disponibles.");
             } else {
-                tvSelectedDesc.setText("Puesto seleccionado: Venta de antojitos tradicionales preparados al día. Consulta el catálogo para ver productos disponibles.");
+                tvSelectedDesc.setText("Puesto seleccionado: Venta de productos tradicionales preparados al día. Consulta el catálogo para ver productos disponibles.");
             }
         }
 
@@ -639,7 +606,7 @@ public class ListaVendedoresActivity extends AppCompatActivity {
     }
 
     private void agregarFavorito(VendedorListaDto vendedor) {
-        String nombreVendedor = vendedor.nombreCompleto == null ? "Puesto de Antojitos" : vendedor.nombreCompleto;
+        String nombreVendedor = vendedor.nombreCompleto == null ? "Puesto de Vendedor" : vendedor.nombreCompleto;
         favoritosIds.add(vendedor.idUsuario);
         actualizarBotonFavorito(vendedor);
         render();

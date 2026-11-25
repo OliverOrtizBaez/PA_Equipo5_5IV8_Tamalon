@@ -166,7 +166,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:gravity="center"
-                android:text="Agrega tus tamales, atoles o antojitos con foto, precio y categorías para que los clientes los vean."
+                android:text="Agrega tus productos con foto, precio y categorías para que los clientes los vean."
                 android:textColor="@color/tamalon_muted"
                 android:textSize="9.5sp" />
         </LinearLayout>

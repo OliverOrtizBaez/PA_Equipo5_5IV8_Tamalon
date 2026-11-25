@@ -414,7 +414,7 @@ public class CatalogoActivity extends AppCompatActivity {
                                         dto.nombre == null ? "Producto" : dto.nombre,
                                         dto.descripcion == null ? "" : dto.descripcion,
                                         dto.precio,
-                                        dto.categoria == null ? "Tamales" : dto.categoria,
+                                        dto.categoria == null ? "" : dto.categoria,
                                         dto.visible ? "Activo" : "Inactivo"
                                 );
                                 nuevo.imagenUri = dto.getImagenEfectiva();

@@ -21,17 +21,17 @@ public class CrearProductoRequest {
     @SerializedName("estado")
     public String estado;
 
-    @SerializedName("categoria")
-    public String categoria;
+    @SerializedName("id_categoria")
+    public int idCategoria;
 
     public CrearProductoRequest(int idCatalogo, String nombre, String descripcion,
-                                double precio, String imagen, String estado, String categoria) {
+                                double precio, String imagen, String estado, int idCategoria) {
         this.idCatalogo = idCatalogo;
         this.nombre = nombre;
         this.descripcion = descripcion;
         this.precio = precio;
         this.imagen = imagen;
         this.estado = estado;
-        this.categoria = categoria;
+        this.idCategoria = idCategoria;
     }
 }

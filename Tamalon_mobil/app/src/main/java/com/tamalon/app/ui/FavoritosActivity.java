@@ -137,7 +137,7 @@ public class FavoritosActivity extends AppCompatActivity {
                         for (FavoritoDto f : response.body().favoritos) {
                             int idVend = f.idVendedor > 0 ? f.idVendedor : (f.vendedor != null ? f.vendedor.idUsuario : 0);
                             String name = f.nombreVendedor != null ? f.nombreVendedor
-                                    : (f.vendedor != null && f.vendedor.nombreCompleto != null ? f.vendedor.nombreCompleto : "Puesto de Antojitos");
+                                    : (f.vendedor != null && f.vendedor.nombreCompleto != null ? f.vendedor.nombreCompleto : "Puesto de Vendedor");
                             String foto = f.fotoPerfil != null ? f.fotoPerfil
                                     : (f.vendedor != null ? f.vendedor.fotoPerfil : null);
                             if (idVend > 0) {

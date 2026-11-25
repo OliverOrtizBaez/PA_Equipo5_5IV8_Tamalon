@@ -7,7 +7,7 @@
 <resources>
     <!-- App -->
     <string name="app_name">Tamalon</string>
-    <string name="app_tagline">Antojitos que te encuentran</string>
+    <string name="app_tagline">Vendedores que te encuentran</string>
 
     <!-- Bienvenida -->
     <string name="welcome_role_client">Soy Cliente</string>
@@ -59,7 +59,7 @@
     <!-- Mapa -->
     <string name="map_title">Tu ubicación de hoy</string>
     <string name="map_title_client">Encuentra tu antojo</string>
-    <string name="map_search_hint">Buscar vendedores o antojitos</string>
+    <string name="map_search_hint">Buscar vendedores</string>
     <string name="map_vendors_nearby">Vendedores cercanos</string>
     <string name="map_radius_label">Hasta 3 km de tu ubicación</string>
     <string name="map_loading">Cargando mapa…</string>

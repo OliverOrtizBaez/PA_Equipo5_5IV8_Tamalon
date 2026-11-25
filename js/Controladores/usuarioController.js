@@ -2,7 +2,7 @@ const { pool } = require('../config/db');
 const { transaccion } = require('../config/db');
 const C = require('../config/constantes');
 const { ErrorHttp, ErrorValidacion, asyncHandler } = require('../utils/errores');
-const { validar } = require('../utils/validaciones');
+const { validar, esUrlCloudinary } = require('../utils/validaciones');
 
 async function cargarPerfil(idUsuario) {
   const [[usuario]] = await pool.query(
@@ -68,15 +68,8 @@ const actualizarPerfil = asyncHandler(async (req, res) => {
 const actualizarFotoPerfil = asyncHandler(async (req, res) => {
   const foto = req.body?.foto_perfil;
   if (foto !== null && foto !== '') {
-    if (typeof foto !== 'string' || foto.length > 2048) {
-      throw new ErrorValidacion(['Dato inválido en Foto de perfil: debe ser una URL HTTPS de hasta 2048 caracteres']);
-    }
-    let url;
-    try { url = new URL(foto); } catch (_) {
-      throw new ErrorValidacion(['Dato inválido en Foto de perfil: debe ser una URL HTTPS válida']);
-    }
-    if (url.protocol !== 'https:') {
-      throw new ErrorValidacion(['Dato inválido en Foto de perfil: solo se permiten URL HTTPS']);
+    if (!esUrlCloudinary(foto)) {
+      throw new ErrorValidacion(['Dato inválido en Foto de perfil: debe ser una URL HTTPS de Cloudinary de hasta 2048 caracteres']);
     }
   }
 

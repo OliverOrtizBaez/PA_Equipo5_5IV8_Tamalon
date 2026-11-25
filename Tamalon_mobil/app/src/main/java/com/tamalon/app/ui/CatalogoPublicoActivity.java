@@ -392,7 +392,7 @@ public class CatalogoPublicoActivity extends AppCompatActivity {
             ProductoDto p = item.product;
             ImagenPerfil.mostrarProducto(ph.thumb, p.getImagenEfectiva(), CatalogoPublicoActivity.this);
             ph.name.setText(p.nombre);
-            ph.cat.setText(p.categoria == null || p.categoria.trim().isEmpty() ? "Tamales" : p.categoria);
+            ph.cat.setText(p.categoria == null || p.categoria.trim().isEmpty() ? "" : p.categoria);
             if (esPremium()) {
                 ph.price.setVisibility(View.VISIBLE);
                 ph.desc.setVisibility(View.VISIBLE);

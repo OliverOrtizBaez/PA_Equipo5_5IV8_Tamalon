@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Pantalla de búsqueda y lista de vendedores de antojitos con filtros de zona y detalle de selección. -->
+<!-- Pantalla de búsqueda y lista de vendedores con filtros de zona y detalle de selección. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -43,7 +43,7 @@
                         style="@style/Tamalon.Caption"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="BUSCADOR DE ANTOJITOS"
+                        android:text="BUSCADOR DE VENDEDORES"
                         android:textColor="@color/tamalon_muted"
                         android:textSize="8sp" />
                 </LinearLayout>
@@ -104,7 +104,7 @@
                     android:layout_marginStart="10dp"
                     android:layout_weight="1"
                     android:background="@color/tamalon_transparent"
-                    android:hint="Buscar vendedores o antojitos en tu zona..."
+                    android:hint="Buscar vendedores en tu zona..."
                     android:imeOptions="actionSearch"
                     android:inputType="textCapSentences"
                     android:singleLine="true"
@@ -113,7 +113,7 @@
                     android:textSize="11sp" />
             </LinearLayout>
 
-            <!-- Filtros de categorías / antojitos (horizontal) -->
+            <!-- Filtros de categorías (horizontal) -->
             <HorizontalScrollView
                 android:id="@+id/list_category_scroll"
                 android:layout_width="match_parent"
@@ -206,7 +206,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
                     android:lineSpacingExtra="2dp"
-                    android:text="Especialidad en tamales caseros oaxaqueños, verdes, de mole y de rajas. Atole calientito recién preparado."
+                    android:text="Especialidad en productos frescos y de calidad disponibles al día."
                     android:textColor="@color/tamalon_field_text"
                     android:textSize="10sp" />
 
@@ -305,7 +305,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="5dp"
-                    android:text="Prueba seleccionando otro antojito o borrando el filtro"
+                    android:text="Prueba seleccionando otra categoría o borrando el filtro"
                     android:textSize="9sp" />
             </LinearLayout>
 

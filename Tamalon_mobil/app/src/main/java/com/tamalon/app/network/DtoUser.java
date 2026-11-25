@@ -32,4 +32,7 @@ public class DtoUser {
 
     @SerializedName("zona_horaria")
     public String zonaHoraria;
+
+    @SerializedName("id_tipo_vendedor")
+    public int idTipoVendedor;
 }

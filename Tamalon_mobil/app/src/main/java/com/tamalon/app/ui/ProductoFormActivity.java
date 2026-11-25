@@ -29,8 +29,12 @@ import com.tamalon.app.model.Producto;
 import com.tamalon.app.network.ApiClient;
 import com.tamalon.app.network.ApiErrorHelper;
 import com.tamalon.app.network.ApiService;
+import com.tamalon.app.network.CategoriaDto;
+import com.tamalon.app.network.CategoriasResponse;
 import com.tamalon.app.network.CrearProductoRequest;
+import com.tamalon.app.network.DtoUser;
 import com.tamalon.app.network.ProductoDto;
+import com.tamalon.app.network.TokenStore;
 import com.tamalon.app.validation.ResultadoValidacion;
 import com.tamalon.app.validation.ValidadorProducto;
 
@@ -45,21 +49,14 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 /**
- * Formulario de creación y edición de producto (RF11).
- * Solo botón de galería para la fotografía (sin URL/link ni IDs técnicos),
- * selección única de las 6 categorías oficiales y mensajes de validación estándar.
+ * Formulario de creación y edición de producto.
+ * Carga dinámicamente las categorías desde el servidor (GET api/tipos-vendedor/{id}/categorias).
+ * Si falla la red, muestra error con botón "Reintentar" y deshabilita el botón Guardar.
+ * Envía id_categoria en el POST/PUT del producto.
  */
 public class ProductoFormActivity extends AppCompatActivity {
 
     private static final int REQUEST_PRODUCT_IMAGE = 805;
-    private static final String[] CATEGORIAS_OFICIALES = {
-            "Tamales",
-            "Atole",
-            "Quesadillas",
-            "Pambazos",
-            "Sopes",
-            "Champurrado"
-    };
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private AppDatabase db;
@@ -75,7 +72,7 @@ public class ProductoFormActivity extends AppCompatActivity {
 
     private TextView tvTitle, tvCatalogSubtitle;
     private ImageView ivPreview;
-    private Button btnPickImage;
+    private Button btnPickImage, btnSave;
     private TextView tvImageHint, tvImageError;
     private EditText etName, etDescription, etPrice;
     private TextView tvNameCount, tvNameError, tvDescCount, tvDescError, tvPriceError;
@@ -84,7 +81,10 @@ public class ProductoFormActivity extends AppCompatActivity {
     private Switch switchVisible;
     private Button btnDelete;
 
-    private String categoriaSeleccionada = "";
+    private List<CategoriaDto> listaCategorias = new ArrayList<>();
+    private int idCategoriaSeleccionada = -1;
+    private String nombreCategoriaSeleccionada = "";
+    private String categoriaPendienteEditar = null;
     private final List<Button> chipButtons = new ArrayList<>();
     private String imagenSeleccionada = "";
     private long imagenTamanoBytes = 0L;
@@ -127,6 +127,7 @@ public class ProductoFormActivity extends AppCompatActivity {
         switchVisible = findViewById(R.id.product_visible);
         tvGlobalError = findViewById(R.id.product_global_error);
         btnDelete = findViewById(R.id.product_btn_delete);
+        btnSave = findViewById(R.id.product_btn_save);
 
         if (tvCatalogSubtitle != null) {
             tvCatalogSubtitle.setText("Catálogo: " + catalogoNombre);
@@ -143,9 +144,9 @@ public class ProductoFormActivity extends AppCompatActivity {
             btnCancel.setOnClickListener(v -> finish());
         }
 
-        Button btnSave = findViewById(R.id.product_btn_save);
         if (btnSave != null) {
             btnSave.setBackgroundTintList(null);
+            btnSave.setEnabled(false); // Deshabilitado hasta que carguen las categorías
             btnSave.setOnClickListener(v -> guardarProducto());
         }
 
@@ -155,7 +156,7 @@ public class ProductoFormActivity extends AppCompatActivity {
         }
 
         configurarContadores();
-        construirChipsCategorias();
+        cargarCategoriasServidor();
 
         if (productoLocalId > 0) {
             cargarProductoExistente();
@@ -166,15 +167,88 @@ public class ProductoFormActivity extends AppCompatActivity {
         }
     }
 
+    private void cargarCategoriasServidor() {
+        if (btnSave != null) btnSave.setEnabled(false);
+        if (tvCategorySummary != null) tvCategorySummary.setText("Cargando categorías...");
+
+        TokenStore tokenStore = new TokenStore(this);
+        DtoUser user = tokenStore.getUser();
+        int idTipoVendedor = user != null && user.idTipoVendedor > 0 ? user.idTipoVendedor : 1;
+
+        apiService.obtenerCategoriasTipoVendedor(idTipoVendedor).enqueue(new Callback<CategoriasResponse>() {
+            @Override
+            public void onResponse(@NonNull Call<CategoriasResponse> call, @NonNull Response<CategoriasResponse> response) {
+                if (response.isSuccessful() && response.body() != null && response.body().categorias != null) {
+                    listaCategorias = response.body().categorias;
+                    construirChipsCategorias();
+
+                    if (categoriaPendienteEditar != null && !categoriaPendienteEditar.isEmpty()) {
+                        for (CategoriaDto c : listaCategorias) {
+                            if (c.nombre.equalsIgnoreCase(categoriaPendienteEditar) || String.valueOf(c.idCategoria).equals(categoriaPendienteEditar)) {
+                                idCategoriaSeleccionada = c.idCategoria;
+                                nombreCategoriaSeleccionada = c.nombre;
+                                break;
+                            }
+                        }
+                        if (idCategoriaSeleccionada <= 0 && !listaCategorias.isEmpty()) {
+                            idCategoriaSeleccionada = listaCategorias.get(0).idCategoria;
+                            nombreCategoriaSeleccionada = listaCategorias.get(0).nombre;
+                        }
+                        actualizarVistaChips();
+                        categoriaPendienteEditar = null;
+                    }
+
+                    if (btnSave != null) btnSave.setEnabled(true);
+                    if (tvCategoryError != null) tvCategoryError.setVisibility(View.GONE);
+                } else {
+                    mostrarErrorCargarCategorias("No se pudieron cargar las categorías del servidor.");
+                }
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<CategoriasResponse> call, @NonNull Throwable t) {
+                mostrarErrorCargarCategorias("Error de conexión al cargar categorías.");
+            }
+        });
+    }
+
+    private void mostrarErrorCargarCategorias(String mensaje) {
+        if (categoryContainer != null) {
+            categoryContainer.removeAllViews();
+            LinearLayout errorLayout = new LinearLayout(this);
+            errorLayout.setOrientation(LinearLayout.VERTICAL);
+            errorLayout.setGravity(Gravity.CENTER);
+
+            TextView tvErr = new TextView(this);
+            tvErr.setText(mensaje);
+            tvErr.setTextColor(getColor(R.color.tamalon_error));
+            tvErr.setTextSize(12.5f);
+            tvErr.setGravity(Gravity.CENTER);
+            errorLayout.addView(tvErr);
+
+            Button btnRetry = new Button(this);
+            btnRetry.setText("Reintentar");
+            btnRetry.setBackgroundTintList(null);
+            btnRetry.setOnClickListener(v -> cargarCategoriasServidor());
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            lp.topMargin = dp(8);
+            errorLayout.addView(btnRetry, lp);
+
+            categoryContainer.addView(errorLayout);
+        }
+        if (tvCategorySummary != null) tvCategorySummary.setText("Error al cargar categorías");
+    }
+
     private void cargarProductoDesdeIntent() {
         String nom = getIntent().getStringExtra("producto_nombre");
         String desc = getIntent().getStringExtra("producto_descripcion");
         double pre = getIntent().getDoubleExtra("producto_precio", 0.0);
-        String cat = getIntent().getStringExtra("producto_categoria");
+        String catNombre = getIntent().getStringExtra("producto_categoria");
         String img = getIntent().getStringExtra("producto_imagen");
         String est = getIntent().getStringExtra("producto_estado");
 
-        Producto p = new Producto(catalogoLocalId, vendedorId, nom == null ? "" : nom, desc == null ? "" : desc, pre, cat == null ? "Tamales" : cat, est == null ? "Visible" : est);
+        Producto p = new Producto(catalogoLocalId, vendedorId, nom == null ? "" : nom, desc == null ? "" : desc, pre, catNombre == null ? "" : catNombre, est == null ? "Visible" : est);
         p.remoteId = productoRemoteId;
         p.imagenUri = img;
         productoEditando = p;
@@ -193,11 +267,12 @@ public class ProductoFormActivity extends AppCompatActivity {
             if (tvImageHint != null) tvImageHint.setText("Fotografía cargada");
             if (btnPickImage != null) btnPickImage.setText("Cambiar foto");
         }
-        categoriaSeleccionada = "";
-        if (cat != null) {
-            for (String conocida : CATEGORIAS_OFICIALES) {
-                if (conocida.equalsIgnoreCase(cat.trim())) {
-                    categoriaSeleccionada = conocida;
+        if (catNombre != null && !catNombre.trim().isEmpty()) {
+            categoriaPendienteEditar = catNombre.trim();
+            for (CategoriaDto c : listaCategorias) {
+                if (c.nombre.equalsIgnoreCase(catNombre.trim())) {
+                    idCategoriaSeleccionada = c.idCategoria;
+                    nombreCategoriaSeleccionada = c.nombre;
                     break;
                 }
             }
@@ -243,8 +318,10 @@ public class ProductoFormActivity extends AppCompatActivity {
         categoryContainer.removeAllViews();
         chipButtons.clear();
 
+        if (listaCategorias.isEmpty()) return;
+
         LinearLayout filaActual = null;
-        for (int i = 0; i < CATEGORIAS_OFICIALES.length; i++) {
+        for (int i = 0; i < listaCategorias.size(); i++) {
             if (i % 2 == 0) {
                 filaActual = new LinearLayout(this);
                 filaActual.setOrientation(LinearLayout.HORIZONTAL);
@@ -254,9 +331,9 @@ public class ProductoFormActivity extends AppCompatActivity {
                 categoryContainer.addView(filaActual, rowLp);
             }
 
-            final String categoria = CATEGORIAS_OFICIALES[i];
+            final CategoriaDto catDto = listaCategorias.get(i);
             Button chip = new Button(this);
-            chip.setTag(categoria);
+            chip.setTag(catDto.idCategoria);
             chip.setAllCaps(false);
             chip.setTextSize(10f);
             chip.setMinHeight(0);
@@ -269,24 +346,32 @@ public class ProductoFormActivity extends AppCompatActivity {
             if (i % 2 == 0) chipLp.setMarginEnd(dp(8));
             chip.setLayoutParams(chipLp);
 
-            chip.setOnClickListener(v -> seleccionarCategoria(categoria));
+            chip.setOnClickListener(v -> seleccionarCategoria(catDto.idCategoria, catDto.nombre));
             chipButtons.add(chip);
             filaActual.addView(chip);
         }
         actualizarVistaChips();
     }
 
-    private void seleccionarCategoria(String categoria) {
-        categoriaSeleccionada = categoria;
+    private void seleccionarCategoria(int idCategoria, String nombre) {
+        idCategoriaSeleccionada = idCategoria;
+        nombreCategoriaSeleccionada = nombre;
         if (tvCategoryError != null) tvCategoryError.setVisibility(View.GONE);
         actualizarVistaChips();
     }
 
     private void actualizarVistaChips() {
         for (Button chip : chipButtons) {
-            String cat = (String) chip.getTag();
-            boolean activa = cat != null && cat.equalsIgnoreCase(categoriaSeleccionada);
-            chip.setText((activa ? "✓ " : "") + cat);
+            Object tag = chip.getTag();
+            boolean activa = tag instanceof Integer && (Integer) tag == idCategoriaSeleccionada;
+            String catName = "";
+            for (CategoriaDto c : listaCategorias) {
+                if (tag instanceof Integer && c.idCategoria == (Integer) tag) {
+                    catName = c.nombre;
+                    break;
+                }
+            }
+            chip.setText((activa ? "✓ " : "") + catName);
             chip.setTypeface(null, activa ? Typeface.BOLD : Typeface.NORMAL);
 
             GradientDrawable bg = new GradientDrawable();
@@ -299,9 +384,9 @@ public class ProductoFormActivity extends AppCompatActivity {
         }
 
         if (tvCategorySummary != null) {
-            tvCategorySummary.setText(categoriaSeleccionada.isEmpty()
+            tvCategorySummary.setText(idCategoriaSeleccionada <= 0
                     ? "Elige una categoría para este producto"
-                    : "Categoría seleccionada: " + categoriaSeleccionada);
+                    : "Categoría seleccionada: " + nombreCategoriaSeleccionada);
         }
     }
 
@@ -328,17 +413,14 @@ public class ProductoFormActivity extends AppCompatActivity {
                     if (tvImageHint != null) tvImageHint.setText("Fotografía cargada");
                     if (btnPickImage != null) btnPickImage.setText("Cambiar foto");
                 }
-                categoriaSeleccionada = "";
                 if (p.categoria != null && !p.categoria.trim().isEmpty()) {
-                    for (String parte : p.categoria.split(",")) {
-                        String limpia = parte.trim();
-                        for (String conocida : CATEGORIAS_OFICIALES) {
-                            if (conocida.equalsIgnoreCase(limpia)) {
-                                categoriaSeleccionada = conocida;
-                                break;
-                            }
+                    categoriaPendienteEditar = p.categoria.trim();
+                    for (CategoriaDto c : listaCategorias) {
+                        if (c.nombre.equalsIgnoreCase(p.categoria.trim())) {
+                            idCategoriaSeleccionada = c.idCategoria;
+                            nombreCategoriaSeleccionada = c.nombre;
+                            break;
                         }
-                        if (!categoriaSeleccionada.isEmpty()) break;
                     }
                 }
                 actualizarVistaChips();
@@ -427,7 +509,6 @@ public class ProductoFormActivity extends AppCompatActivity {
         String nombre = etName != null ? etName.getText().toString().trim() : "";
         String descripcion = etDescription != null ? etDescription.getText().toString().trim() : "";
         String precioStr = etPrice != null ? etPrice.getText().toString().trim() : "";
-        String categoria = categoriaSeleccionada;
         String estado = (switchVisible == null || switchVisible.isChecked()) ? "Visible" : "Oculto";
 
         boolean valido = true;
@@ -438,13 +519,15 @@ public class ProductoFormActivity extends AppCompatActivity {
             }
             valido = false;
         } else {
-            ResultadoValidacion rImg = ValidadorProducto.validarImagen(imagenSeleccionada, imagenTamanoBytes);
-            if (!rImg.esValido()) {
-                if (tvImageError != null) {
-                    tvImageError.setText("Dato inválido en Fotografía: debe ser JPG o PNG de máximo 5 MB.");
-                    tvImageError.setVisibility(View.VISIBLE);
+            if (!imagenSeleccionada.startsWith("data:") && !imagenSeleccionada.startsWith("http")) {
+                ResultadoValidacion rImg = ValidadorProducto.validarImagen(imagenSeleccionada, imagenTamanoBytes);
+                if (!rImg.esValido()) {
+                    if (tvImageError != null) {
+                        tvImageError.setText("Dato inválido en Fotografía: debe ser JPG o PNG de máximo 5 MB.");
+                        tvImageError.setVisibility(View.VISIBLE);
+                    }
+                    valido = false;
                 }
-                valido = false;
             }
         }
 
@@ -472,8 +555,11 @@ public class ProductoFormActivity extends AppCompatActivity {
             }
             valido = false;
         }
-        ResultadoValidacion rCat = ValidadorProducto.validarCategoria(categoria);
-        if (!rCat.esValido()) {
+        if (idCategoriaSeleccionada <= 0 && !listaCategorias.isEmpty()) {
+            idCategoriaSeleccionada = listaCategorias.get(0).idCategoria;
+            nombreCategoriaSeleccionada = listaCategorias.get(0).nombre;
+        }
+        if (idCategoriaSeleccionada <= 0) {
             if (tvCategoryError != null) {
                 tvCategoryError.setText("Dato inválido en Categoría: selecciona una categoría válida.");
                 tvCategoryError.setVisibility(View.VISIBLE);
@@ -485,7 +571,7 @@ public class ProductoFormActivity extends AppCompatActivity {
         double precio = Double.parseDouble(precioStr);
         int remoteCatId = catalogoRemoteId > 0 ? catalogoRemoteId : catalogoLocalId;
         CrearProductoRequest req = new CrearProductoRequest(
-                remoteCatId, nombre, descripcion, precio, imagenSeleccionada, estado, categoria
+                remoteCatId, nombre, descripcion, precio, imagenSeleccionada, estado, idCategoriaSeleccionada
         );
 
         if (productoEditando != null) {
@@ -493,16 +579,16 @@ public class ProductoFormActivity extends AppCompatActivity {
                 apiService.actualizarProducto(productoEditando.remoteId, req).enqueue(new Callback<ProductoDto>() {
                     @Override
                     public void onResponse(@NonNull Call<ProductoDto> call, @NonNull Response<ProductoDto> response) {
-                        guardarEdicionLocal(nombre, descripcion, precio, categoria, estado);
+                        guardarEdicionLocal(nombre, descripcion, precio, nombreCategoriaSeleccionada, estado);
                     }
 
                     @Override
                     public void onFailure(@NonNull Call<ProductoDto> call, @NonNull Throwable t) {
-                        guardarEdicionLocal(nombre, descripcion, precio, categoria, estado);
+                        guardarEdicionLocal(nombre, descripcion, precio, nombreCategoriaSeleccionada, estado);
                     }
                 });
             } else {
-                guardarEdicionLocal(nombre, descripcion, precio, categoria, estado);
+                guardarEdicionLocal(nombre, descripcion, precio, nombreCategoriaSeleccionada, estado);
             }
         } else {
             if (catalogoRemoteId > 0) {
@@ -510,9 +596,9 @@ public class ProductoFormActivity extends AppCompatActivity {
                     @Override
                     public void onResponse(@NonNull Call<ProductoDto> call, @NonNull Response<ProductoDto> response) {
                         if (response.isSuccessful() && response.body() != null) {
-                            guardarNuevoLocal(nombre, descripcion, precio, categoria, estado, response.body().idProducto);
+                            guardarNuevoLocal(nombre, descripcion, precio, nombreCategoriaSeleccionada, estado, response.body().idProducto);
                         } else if (response.code() == 404 || response.code() == 405) {
-                            guardarNuevoLocal(nombre, descripcion, precio, categoria, estado, 0);
+                            guardarNuevoLocal(nombre, descripcion, precio, nombreCategoriaSeleccionada, estado, 0);
                         } else {
                             String err = ApiErrorHelper.parseError(ProductoFormActivity.this, null, response);
                             if (tvGlobalError != null) {
@@ -524,7 +610,7 @@ public class ProductoFormActivity extends AppCompatActivity {
 
                     @Override
                     public void onFailure(@NonNull Call<ProductoDto> call, @NonNull Throwable t) {
-                        guardarNuevoLocal(nombre, descripcion, precio, categoria, estado, 0);
+                        guardarNuevoLocal(nombre, descripcion, precio, nombreCategoriaSeleccionada, estado, 0);
                     }
                 });
             } else {
@@ -583,8 +669,12 @@ public class ProductoFormActivity extends AppCompatActivity {
                 .setPositiveButton("Eliminar", (d, w) -> {
                     if (productoEditando.remoteId > 0) {
                         apiService.eliminarProducto(productoEditando.remoteId).enqueue(new Callback<Void>() {
-                            @Override public void onResponse(@NonNull Call<Void> call, @NonNull Response<Void> response) { eliminarLocal(); }
-                            @Override public void onFailure(@NonNull Call<Void> call, @NonNull Throwable t) { eliminarLocal(); }
+                            @Override public void onResponse(@NonNull Call<Void> call, @NonNull Response<Void> response) {
+                                eliminarLocal();
+                            }
+                            @Override public void onFailure(@NonNull Call<Void> call, @NonNull Throwable t) {
+                                eliminarLocal();
+                            }
                         });
                     } else {
                         eliminarLocal();
@@ -592,6 +682,7 @@ public class ProductoFormActivity extends AppCompatActivity {
                 })
                 .show();
     }
+
 
     private void eliminarLocal() {
         executor.execute(() -> {

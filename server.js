@@ -17,6 +17,7 @@ const ubicacionRoutes = require('./js/routes/ubicacionRoutes');
 const tiposVendedorRoutes = require('./js/routes/tiposVendedorRoutes');
 const eventosRoutes = require('./js/routes/eventosRoutes');
 const estadisticasRoutes = require('./js/routes/estadisticasRoutes');
+const imagenesRoutes = require('./js/routes/imagenesRoutes');
 const { noEncontrado, manejadorErrores } = require('./js/middlewares/errores');
 const { iniciarJobs } = require('./js/jobs');
 const { iniciarWebSocket } = require('./js/ws/authSocket');
@@ -53,6 +54,7 @@ app.use('/api/ubicacion', ubicacionRoutes);
 app.use('/api/tipos-vendedor', tiposVendedorRoutes);
 app.use('/api/eventos', eventosRoutes);
 app.use('/api/estadisticas', estadisticasRoutes);
+app.use('/api/imagenes', imagenesRoutes);
 app.use('/api', noEncontrado);
 
 app.use('/css', express.static(path.join(__dirname, 'css')));

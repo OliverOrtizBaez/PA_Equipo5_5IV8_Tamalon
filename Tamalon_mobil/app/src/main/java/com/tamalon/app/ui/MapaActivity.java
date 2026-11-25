@@ -78,10 +78,10 @@ public class MapaActivity extends AppCompatActivity {
     private TextView tvMapEstado;
     private Button btnZoomIn, btnZoomOut, btnToggleRuta, btnGrantPermission;
     private LinearLayout categoryFiltersContainer;
-    private final String[] categoriasAntojitos = {"Tamales", "Atole", "Quesadillas", "Pambazos", "Sopes", "Champurrado"};
+    private final List<TipoVendedorDto> listaTipos = new ArrayList<>();
+    private Integer idTipoVendedorSeleccionado = null;
     private EditText mapSearchInput;
     private volatile String textoBusquedaMapa = "";
-    private final Set<String> filtrosAntojitos = new HashSet<>();
     private MapView mapView;
     private Marker marcadorUsuario;
     private Polygon circuloBusqueda;
@@ -149,9 +149,7 @@ public class MapaActivity extends AppCompatActivity {
             @Override public void afterTextChanged(Editable s) { }
         });
 
-        android.content.SharedPreferences filtrosPrefs = getSharedPreferences("tamalon_map_filters_" + usuarioId, MODE_PRIVATE);
-        filtrosAntojitos.addAll(filtrosPrefs.getStringSet("categorias", new HashSet<>()));
-        construirBotonesPreferencias();
+        cargarTiposVendedor();
 
         btnZoomIn.setOnClickListener(v -> { if (mapView != null) mapView.getController().zoomIn(); });
         btnZoomOut.setOnClickListener(v -> { if (mapView != null) mapView.getController().zoomOut(); });
@@ -460,10 +458,9 @@ public class MapaActivity extends AppCompatActivity {
         double lat = ultimaUbicacion.getLatitude();
         double lng = ultimaUbicacion.getLongitude();
 
-        String cat = filtrosAntojitos.isEmpty() ? null : filtrosAntojitos.iterator().next();
         String buscar = textoBusquedaMapa.isEmpty() ? null : textoBusquedaMapa;
 
-        apiService.obtenerCercanos(lat, lng, AppConfig.RADIO_KM, null, buscar).enqueue(new Callback<CercanosResponse>() {
+        apiService.obtenerCercanos(lat, lng, AppConfig.RADIO_KM, idTipoVendedorSeleccionado, buscar).enqueue(new Callback<CercanosResponse>() {
             @Override
             public void onResponse(@NonNull Call<CercanosResponse> call, @NonNull Response<CercanosResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {
@@ -554,7 +551,7 @@ public class MapaActivity extends AppCompatActivity {
             ImagenPerfil.mostrar(cardVendorAvatar, vendedor.fotoPerfil, this);
         }
         if (cardVendorName != null) {
-            cardVendorName.setText(vendedor.nombreCompleto == null ? "Puesto de Antojitos" : vendedor.nombreCompleto);
+            cardVendorName.setText(vendedor.nombreCompleto == null ? "Puesto de Vendedor" : vendedor.nombreCompleto);
         }
         if (cardVendorDistance != null) {
             cardVendorDistance.setText(String.format(java.util.Locale.getDefault(), "A %.0f m de ti · En ruta activa", vendedor.distanciaM));
@@ -699,39 +696,56 @@ public class MapaActivity extends AppCompatActivity {
         mapView.invalidate();
     }
 
+    private void cargarTiposVendedor() {
+        apiService.obtenerTiposVendedor().enqueue(new Callback<List<TipoVendedorDto>>() {
+            @Override
+            public void onResponse(@NonNull Call<List<TipoVendedorDto>> call, @NonNull Response<List<TipoVendedorDto>> response) {
+                listaTipos.clear();
+                if (response.isSuccessful() && response.body() != null) {
+                    listaTipos.addAll(response.body());
+                }
+                construirBotonesPreferencias();
+                if (ultimaUbicacion != null) {
+                    refrescarVendedoresCercanos();
+                }
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<List<TipoVendedorDto>> call, @NonNull Throwable t) {
+                construirBotonesPreferencias();
+            }
+        });
+    }
+
     private void construirBotonesPreferencias() {
         if (categoryFiltersContainer == null) return;
         categoryFiltersContainer.removeAllViews();
-        for (String categoria : categoriasAntojitos) {
-            Button chip = new Button(this);
-            chip.setText(categoria);
-            chip.setAllCaps(false);
-            chip.setTextSize(11f);
-            chip.setTypeface(null, Typeface.BOLD);
-            chip.setMinHeight(0);
-            chip.setMinimumHeight(0);
-            chip.setMinWidth(0);
-            chip.setMinimumWidth(0);
-            chip.setPadding(dp(15), dp(5), dp(15), dp(5));
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT, dp(38));
-            params.setMargins(dp(4), 0, dp(4), 0);
-            chip.setLayoutParams(params);
-            actualizarEstiloPreferencia(chip, categoria);
-            chip.setOnClickListener(v -> {
-                if (filtrosAntojitos.contains(categoria)) filtrosAntojitos.remove(categoria);
-                else filtrosAntojitos.add(categoria);
-                getSharedPreferences("tamalon_map_filters_" + usuarioId, MODE_PRIVATE).edit()
-                        .putStringSet("categorias", new HashSet<>(filtrosAntojitos)).apply();
-                actualizarEstiloPreferencia(chip, categoria);
-                refrescarVendedoresCercanos();
-            });
-            categoryFiltersContainer.addView(chip);
+
+        agregarChipTipoMapa("Todos", null);
+        for (TipoVendedorDto tipo : listaTipos) {
+            agregarChipTipoMapa(tipo.nombre, tipo.idTipoVendedor);
         }
     }
 
-    private void actualizarEstiloPreferencia(Button boton, String categoria) {
-        boolean seleccionado = filtrosAntojitos.contains(categoria);
+    private void agregarChipTipoMapa(String nombre, Integer idTipo) {
+        Button chip = new Button(this);
+        chip.setText(nombre);
+        chip.setAllCaps(false);
+        chip.setTextSize(11f);
+        chip.setTypeface(null, Typeface.BOLD);
+        chip.setMinHeight(0);
+        chip.setMinimumHeight(0);
+        chip.setMinWidth(0);
+        chip.setMinimumWidth(0);
+        chip.setPadding(dp(15), dp(5), dp(15), dp(5));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, dp(38));
+        params.setMargins(dp(4), 0, dp(4), 0);
+        chip.setLayoutParams(params);
+
+        boolean seleccionado = (idTipo == null && idTipoVendedorSeleccionado == null) ||
+                (idTipo != null && idTipo.equals(idTipoVendedorSeleccionado));
+
         int fondo = seleccionado ? getColor(R.color.tamalon_sand_strong) : getColor(R.color.tamalon_surface);
         int texto = getColor(R.color.tamalon_field_text);
         int borde = seleccionado ? getColor(R.color.tamalon_heading_muted) : getColor(R.color.tamalon_line);
@@ -741,12 +755,20 @@ public class MapaActivity extends AppCompatActivity {
         forma.setStroke(dp(1), borde);
         RippleDrawable fondoInteractivo = new RippleDrawable(
                 ColorStateList.valueOf(getColor(R.color.tamalon_sand)), forma, null);
-        boton.setBackground(fondoInteractivo);
-        boton.setBackgroundTintList(null);
-        boton.setTextColor(texto);
-        boton.setElevation(seleccionado ? dp(2) : 0);
-        boton.setAlpha(1f);
-        boton.setContentDescription(categoria + (seleccionado ? ", seleccionado" : ", no seleccionado"));
+        chip.setBackground(fondoInteractivo);
+        chip.setBackgroundTintList(null);
+        chip.setTextColor(texto);
+        chip.setElevation(seleccionado ? dp(2) : 0);
+        chip.setAlpha(1f);
+        chip.setContentDescription(nombre + (seleccionado ? ", seleccionado" : ", no seleccionado"));
+
+        chip.setOnClickListener(v -> {
+            idTipoVendedorSeleccionado = idTipo;
+            construirBotonesPreferencias();
+            refrescarVendedoresCercanos();
+        });
+
+        categoryFiltersContainer.addView(chip);
     }
 
     private int dp(float valor) {

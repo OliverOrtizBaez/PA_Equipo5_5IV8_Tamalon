@@ -66,7 +66,7 @@ public interface ApiService {
     Call<List<TipoVendedorDto>> obtenerTiposVendedor();
 
     @GET("api/tipos-vendedor/{id}/categorias")
-    Call<List<String>> obtenerCategoriasTipoVendedor(@Path("id") int idTipoVendedor);
+    Call<CategoriasResponse> obtenerCategoriasTipoVendedor(@Path("id") int idTipoVendedor);
 
     // Catálogos
     @GET("api/catalogos/mios")
