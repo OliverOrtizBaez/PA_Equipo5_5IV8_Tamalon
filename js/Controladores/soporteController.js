@@ -19,15 +19,15 @@ const crearReporte = asyncHandler(async (req, res) => {
   if (idReportado === req.usuario.id) throw new ErrorHttp(400, 'No puedes reportar tu propia cuenta');
 
   const [usuarios] = await pool.query(
-    'SELECT id_usuario, tipo FROM usuarios WHERE id_usuario = ? LIMIT 1',
+    'SELECT id_usuario, rol FROM vw_usuario WHERE id_usuario = ? LIMIT 1',
     [idReportado]
   );
   const reportado = usuarios[0];
   if (!reportado) throw new ErrorHttp(404, 'La cuenta que intentas reportar no existe');
-  if (!tiposSociales.includes(req.usuario.tipo) || !tiposSociales.includes(reportado.tipo)) {
+  if (!tiposSociales.includes(req.usuario.tipo) || !tiposSociales.includes(reportado.rol)) {
     throw new ErrorHttp(400, 'Solo puedes reportar entre cuentas de cliente y vendedor');
   }
-  if (req.usuario.tipo === reportado.tipo) {
+  if (req.usuario.tipo === reportado.rol) {
     throw new ErrorHttp(400, 'Solo puedes reportar a usuarios del rol opuesto');
   }
 
@@ -40,11 +40,11 @@ const crearReporte = asyncHandler(async (req, res) => {
 
 const obtenerMisReportes = asyncHandler(async (req, res) => {
   const [reportes] = await pool.query(
-    `SELECT r.id_reporte, r.id_reportado, u.nombre_completo AS nombre_reportado, r.motivo, r.fech_hrs
+    `SELECT r.id_reporte, r.id_reportado, u.nombre_completo AS nombre_reportado, r.motivo, r.fecha
        FROM reporte r
-       JOIN usuarios u ON u.id_usuario = r.id_reportado
+       JOIN vw_usuario u ON u.id_usuario = r.id_reportado
       WHERE r.id_emisor = ?
-      ORDER BY r.fech_hrs DESC, r.id_reporte DESC`,
+      ORDER BY r.fecha DESC, r.id_reporte DESC`,
     [req.usuario.id]
   );
   res.json({ reportes });
@@ -65,8 +65,9 @@ const crearSolicitudSoporte = asyncHandler(async (req, res) => {
   if (errores.length) throw new ErrorValidacion(errores);
 
   const [resultado] = await pool.query(
-    `INSERT INTO solicitudes_soporte (id_usuario, categoria, asunto, descripcion)
-     VALUES (?, ?, ?, ?)`,
+    `INSERT INTO solicitud_soporte
+       (id_usuario, id_categoria_soporte, asunto, descripcion)
+     VALUES (?, (SELECT id_categoria_soporte FROM categoria_soporte WHERE clave = ?), ?, ?)`,
     [req.usuario.id, categoria, asunto.trim(), descripcion.trim()]
   );
   res.status(201).json({ mensaje: 'Solicitud de soporte enviada', id_solicitud: resultado.insertId });
@@ -74,10 +75,13 @@ const crearSolicitudSoporte = asyncHandler(async (req, res) => {
 
 const obtenerMisTickets = asyncHandler(async (req, res) => {
   const [tickets] = await pool.query(
-    `SELECT id_solicitud, categoria, asunto, descripcion, estado, fecha_creacion
-       FROM solicitudes_soporte
-      WHERE id_usuario = ?
-      ORDER BY fecha_creacion DESC, id_solicitud DESC`,
+    `SELECT ss.id_solicitud, cs.clave AS categoria, es.clave AS estado,
+            ss.asunto, ss.descripcion, ss.fecha_creacion
+       FROM solicitud_soporte ss
+       JOIN categoria_soporte cs ON cs.id_categoria_soporte = ss.id_categoria_soporte
+       JOIN estado_soporte es ON es.id_estado_soporte = ss.id_estado_soporte
+      WHERE ss.id_usuario = ?
+      ORDER BY ss.fecha_creacion DESC, ss.id_solicitud DESC`,
     [req.usuario.id]
   );
   res.json({ tickets });

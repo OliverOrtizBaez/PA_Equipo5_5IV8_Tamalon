@@ -4,6 +4,7 @@ const producto = require('../Controladores/productoController');
 const { verificarSesion } = require('../middlewares/autenticacion');
 
 // Rutas de Catálogos
+router.get('/mios', verificarSesion, catalogo.obtenerMios);
 router.get('/vendedor/:vendedorId', catalogo.obtenerPorVendedor); // Catálogos públicos de un vendedor
 router.post('/', verificarSesion, catalogo.crearCatalogo);         // Validar límite (Gratuito: 1, Premium: 3)
 router.put('/:id', verificarSesion, catalogo.actualizarCatalogo);

@@ -1,0 +1,376 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Formulario de creación / edición de Producto (RF11). Solo galería de fotos, sin links ni IDs técnicos. -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/tamalon_background"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="@dimen/screen_horizontal"
+        android:paddingTop="@dimen/screen_top"
+        android:paddingBottom="32dp">
+
+        <TextView
+            android:id="@+id/product_form_title"
+            style="@style/Tamalon.SectionTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="@string/product_form_add_title"
+            android:textColor="@color/tamalon_ink"
+            android:textSize="22sp" />
+
+        <TextView
+            android:id="@+id/product_catalog_subtitle"
+            style="@style/Tamalon.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Catálogo"
+            android:textColor="@color/tamalon_muted"
+            android:textSize="9.5sp" />
+
+        <!-- Fotografía obligatoria (solo botón para abrir galería, igual que foto de perfil) -->
+        <LinearLayout
+            style="@style/Tamalon.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="14dp">
+
+            <ImageView
+                android:id="@+id/product_image_preview"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:background="@drawable/bg_surface_card"
+                android:clipToOutline="true"
+                android:contentDescription="@string/product_image_label"
+                android:padding="14dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_photo_placeholder" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    style="@style/Tamalon.Body"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Fotografía del producto"
+                    android:textColor="@color/tamalon_ink"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/product_image_hint"
+                    style="@style/Tamalon.Caption"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:text="Obligatoria · JPG o PNG (máx. 5 MB)"
+                    android:textColor="@color/tamalon_muted"
+                    android:textSize="8.5sp" />
+
+                <android.widget.Button
+                    android:id="@+id/product_btn_pick_image"
+                    android:layout_width="wrap_content"
+                    android:layout_height="38dp"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_button"
+                    android:backgroundTint="@null"
+                    android:fontFamily="@font/inter"
+                    android:paddingHorizontal="14dp"
+                    android:text="Agregar foto"
+                    android:textAllCaps="false"
+                    android:textColor="@color/tamalon_field_text"
+                    android:textSize="10sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/product_image_error"
+            style="@style/Tamalon.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:text=""
+            android:textColor="@color/tamalon_error"
+            android:textSize="8.5sp"
+            android:visibility="gone" />
+
+        <!-- Nombre -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:orientation="horizontal">
+
+            <TextView
+                style="@style/Tamalon.Caption"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/product_name_label"
+                android:textColor="@color/tamalon_field_text" />
+
+            <TextView
+                android:id="@+id/product_name_count"
+                style="@style/Tamalon.Caption"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0/60"
+                android:textColor="@color/tamalon_muted" />
+        </LinearLayout>
+
+        <EditText
+            android:id="@+id/product_name"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginTop="5dp"
+            android:background="@drawable/bg_input"
+            android:hint="@string/product_name_hint"
+            android:inputType="textCapWords"
+            android:maxLength="60"
+            android:padding="10dp"
+            android:textColor="@color/tamalon_ink"
+            android:textColorHint="@color/tamalon_muted"
+            android:textSize="10sp" />
+
+        <TextView
+            android:id="@+id/product_name_error"
+            style="@style/Tamalon.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:text=""
+            android:textColor="@color/tamalon_error"
+            android:textSize="8.5sp"
+            android:visibility="gone" />
+
+        <!-- Descripción -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal">
+
+            <TextView
+                style="@style/Tamalon.Caption"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/product_description_label"
+                android:textColor="@color/tamalon_field_text" />
+
+            <TextView
+                android:id="@+id/product_description_count"
+                style="@style/Tamalon.Caption"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0/300"
+                android:textColor="@color/tamalon_muted" />
+        </LinearLayout>
+
+        <EditText
+            android:id="@+id/product_description"
+            android:layout_width="match_parent"
+            android:layout_height="90dp"
+            android:layout_marginTop="5dp"
+            android:background="@drawable/bg_input"
+            android:gravity="top|start"
+            android:hint="@string/product_description_hint"
+            android:inputType="textMultiLine|textCapSentences"
+            android:maxLength="300"
+            android:padding="10dp"
+            android:textColor="@color/tamalon_ink"
+            android:textColorHint="@color/tamalon_muted"
+            android:textSize="10sp" />
+
+        <TextView
+            android:id="@+id/product_description_error"
+            style="@style/Tamalon.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:text=""
+            android:textColor="@color/tamalon_error"
+            android:textSize="8.5sp"
+            android:visibility="gone" />
+
+        <!-- Precio -->
+        <TextView
+            style="@style/Tamalon.Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/product_price_label"
+            android:textColor="@color/tamalon_field_text" />
+
+        <EditText
+            android:id="@+id/product_price"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginTop="5dp"
+            android:background="@drawable/bg_input"
+            android:hint="0.00"
+            android:inputType="numberDecimal"
+            android:padding="10dp"
+            android:textColor="@color/tamalon_ink"
+            android:textColorHint="@color/tamalon_muted"
+            android:textSize="10sp" />
+
+        <TextView
+            android:id="@+id/product_price_error"
+            style="@style/Tamalon.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:text=""
+            android:textColor="@color/tamalon_error"
+            android:textSize="8.5sp"
+            android:visibility="gone" />
+
+        <!-- Categorías / Preferencias (selector tipo chips) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:orientation="horizontal">
+
+            <TextView
+                style="@style/Tamalon.Caption"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Categoría (selección única)"
+                android:textColor="@color/tamalon_field_text" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/product_category_summary"
+            style="@style/Tamalon.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:text="Elige una categoría para este producto"
+            android:textColor="@color/tamalon_muted"
+            android:textSize="8.5sp" />
+
+        <LinearLayout
+            android:id="@+id/product_category_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="vertical" />
+
+        <TextView
+            android:id="@+id/product_category_error"
+            style="@style/Tamalon.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:text=""
+            android:textColor="@color/tamalon_error"
+            android:textSize="8.5sp"
+            android:visibility="gone" />
+
+        <!-- Visible en catálogo -->
+        <LinearLayout
+            style="@style/Tamalon.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                style="@style/Tamalon.Body"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Estado: Visible en catálogo"
+                android:textColor="@color/tamalon_ink"
+                android:textSize="10sp" />
+
+            <Switch
+                android:id="@+id/product_visible"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="true" />
+        </LinearLayout>
+
+        <!-- Error global -->
+        <TextView
+            android:id="@+id/product_global_error"
+            style="@style/Tamalon.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/bg_surface_card"
+            android:padding="10dp"
+            android:text=""
+            android:textColor="@color/tamalon_error"
+            android:textSize="9sp"
+            android:visibility="gone" />
+
+        <!-- Guardar / Cancelar -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:orientation="horizontal">
+
+            <android.widget.Button
+                android:id="@+id/product_btn_cancel"
+                android:layout_width="0dp"
+                android:layout_height="46dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_surface_card"
+                android:backgroundTint="@null"
+                android:fontFamily="@font/inter"
+                android:text="@string/btn_cancel"
+                android:textAllCaps="false"
+                android:textColor="@color/tamalon_field_text"
+                android:textSize="10.5sp" />
+
+            <android.widget.Button
+                android:id="@+id/product_btn_save"
+                android:layout_width="0dp"
+                android:layout_height="46dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_button"
+                android:backgroundTint="@null"
+                android:fontFamily="@font/inter"
+                android:text="@string/btn_save"
+                android:textAllCaps="false"
+                android:textColor="@color/tamalon_ink"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- Eliminar (solo en modo edición) -->
+        <android.widget.Button
+            android:id="@+id/product_btn_delete"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/bg_surface_card"
+            android:backgroundTint="@null"
+            android:fontFamily="@font/inter"
+            android:text="@string/product_btn_delete"
+            android:textAllCaps="false"
+            android:textColor="@color/tamalon_error"
+            android:textSize="10sp"
+            android:visibility="gone" />
+    </LinearLayout>
+</ScrollView>

@@ -1,21 +1,4 @@
-// Canal WebSocket de sesion: ws(s)://<host>/ws/auth
-//
-// Sirve para dos cosas con el mismo protocolo:
-//   1) Iniciar sesion ({type:"login"}), que es lo que usa la pagina de login del panel web.
-//   2) Mantener abierto un canal por el que el servidor EMPUJA {type:"session_revoked"} en el
-//      instante en que se revoca la sesion. El cliente lo abre con {type:"auth", token}.
-//
-// Mensajes (JSON, un objeto por frame de texto)
-//   cliente -> servidor
-//     {type:"login", correo, contrasena, zona_horaria?}  -> {type:"login_ok", token, expira, usuario}
-//                                                           | {type:"login_error", status, mensaje}
-//     {type:"auth", token}                               -> {type:"auth_ok", expira, usuario}
-//                                                           | {type:"auth_error", status, mensaje} + cierre 4401
-//     {type:"logout"}                                    -> {type:"logout_ok"} + cierre normal
-//     {type:"ping"}                                      -> {type:"pong"}
-//   servidor -> cliente (sin que lo pida)
-//     {type:"session_revoked", motivo, mensaje} + cierre 4001
-//        motivo: suspendido | contrasena_cambiada | logout | expirada | sesion_invalida
+
 const { WebSocketServer } = require('ws');
 const MSG = require('../utils/mensajes');
 const { ErrorHttp } = require('../utils/errores');

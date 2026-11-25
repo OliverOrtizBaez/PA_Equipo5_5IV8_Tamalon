@@ -285,7 +285,8 @@ h1 {
     box-shadow: 0 16px 48px rgba(61, 43, 31, .14);
 }
 
-.map-wrap svg.map-bg {
+.map-wrap svg.map-bg,
+.map-wrap img.map-bg {
     position: absolute;
     inset: 0;
     width: 100%;
@@ -342,6 +343,18 @@ h1 {
 .pin-label.inactive {
     background: var(--mid);
     color: var(--cream);
+}
+
+.type-icons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 0;
+}
+
+.type-icons img {
+    width: 30px;
+    height: 30px;
 }
 
 .pin-ring {

@@ -6,7 +6,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test tests/jwt.test.js tests/ws-auth.test.js"
+    "test": "node --test tests/*.test.js",
+    "seed:dev": "node scripts/seed_dev.js"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

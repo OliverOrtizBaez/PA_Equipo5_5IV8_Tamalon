@@ -1,110 +1,67 @@
-// Logica de cambio de plan. Recibe una conexion de transaccion para que el rol, los catalogos,
-// los productos y las rutas cambien juntos o no cambien. La reutilizaran los pagos (RF5.x) y los jobs.
-const {
-  TIPOS, PLANES, componerRol, PREMIUM_DIAS, LIMITE_CATALOGOS_PREMIUM, LIMITE_PRODUCTOS_GRATIS, LIMITE_PRODUCTOS_PREMIUM,
-} = require('../config/constantes');
-const { fechaEnZona, sumarDiasFecha } = require('../utils/fechas');
+const { LIMITE_CATALOGOS_PREMIUM, LIMITE_PRODUCTOS_GRATIS, LIMITE_PRODUCTOS_PREMIUM } = require('../config/constantes');
 
-const esVendedor = (usuario) => usuario.tipo === TIPOS.VENDEDOR;
-const esGratuito = (usuario) => usuario.plan === PLANES.GRATUITO;
-const esPremium = (usuario) => usuario.plan === PLANES.PREMIUM;
-
-/** Fecha de corte = dia de hoy en ZH-N + 30 dias (RF5.7 / RF17b). Devuelve 'YYYY-MM-DD'. */
-const calcularFechaCorte = (desde = new Date()) => sumarDiasFecha(fechaEnZona(desde), PREMIUM_DIAS);
-
-/**
- * Gratuito -> Premium del mismo tipo.
- * Vendedor: restaura catalogos/productos (RF5.8a) y reactiva rutas (RF5.8b).
- * Cliente: su lista de favoritos queda habilitada solo por tener el rol (RF9.4b).
- */
-async function activarPremium(conn, usuario, { fechaCorte, renovacion }) {
-  if (usuario.tipo === TIPOS.VENDEDOR) {
-    await conn.query(
-      'UPDATE vendedor SET plan = ?, fecha_corte = ?, renovacion = ? WHERE id_vendedor = ?',
-      [PLANES.PREMIUM, fechaCorte, renovacion ? 1 : 0, usuario.id_usuario]
-    );
-    await restaurarContenidoVendedor(conn, usuario.id_usuario);
-  } else if (usuario.tipo === TIPOS.CLIENTE) {
-    await conn.query(
-      'UPDATE cliente SET plan = ?, fecha_corte = ?, renovacion = ? WHERE id_cliente = ?',
-      [PLANES.PREMIUM, fechaCorte, renovacion ? 1 : 0, usuario.id_usuario]
-    );
-  }
-  return componerRol(usuario.tipo, PLANES.PREMIUM);
+async function activarPremium(conn, idVendedor, idPago = null) {
+  await conn.query(
+    'INSERT INTO premium_vendedor (id_vendedor, id_pago) VALUES (?, ?)',
+    [idVendedor, idPago]
+  );
+  await restaurarContenidoVendedor(conn, idVendedor);
 }
 
-/**
- * Premium -> Gratuito del mismo tipo (borra fecha de corte y desactiva renovacion).
- * Vendedor: oculta catalogos (RF5.5a) y productos excedentes (RF5.5b), inactiva rutas (RF5.6).
- * Cliente: los favoritos NO se borran; quedan inaccesibles por rol (RF9.4a).
- */
-async function degradarAGratuito(conn, usuario) {
-  if (usuario.tipo === TIPOS.VENDEDOR) {
-    await conn.query(
-      'UPDATE vendedor SET plan = ?, fecha_corte = NULL, renovacion = 0 WHERE id_vendedor = ?',
-      [PLANES.GRATUITO, usuario.id_usuario]
-    );
-    await limitarContenidoVendedor(conn, usuario.id_usuario);
-  } else if (usuario.tipo === TIPOS.CLIENTE) {
-    await conn.query(
-      'UPDATE cliente SET plan = ?, fecha_corte = NULL, renovacion = 0 WHERE id_cliente = ?',
-      [PLANES.GRATUITO, usuario.id_usuario]
-    );
-  }
-  return componerRol(usuario.tipo, PLANES.GRATUITO);
+async function revocarPremium(conn, idVendedor) {
+  await conn.query('DELETE FROM premium_vendedor WHERE id_vendedor = ?', [idVendedor]);
+  await limitarContenidoVendedor(conn, idVendedor);
 }
 
-// RF5.5a + RF5.5b + RF5.6
 async function limitarContenidoVendedor(conn, idVendedor) {
-  const [cats] = await conn.query(
-    'SELECT id_catalogo FROM catalogo WHERE id_vendedor = ? ORDER BY fech_creacion ASC, id_catalogo ASC FOR UPDATE',
+  const [catalogos] = await conn.query(
+    `SELECT id_catalogo FROM catalogo
+      WHERE id_vendedor = ? ORDER BY fecha_creacion, id_catalogo FOR UPDATE`,
     [idVendedor]
   );
-  if (cats.length > 0) {
-    const conservado = cats[0].id_catalogo; // el mas antiguo (empate: menor ID), aunque este vacio
+  const conservado = catalogos[0]?.id_catalogo;
+  if (conservado !== undefined) {
     await conn.query(
-      "UPDATE catalogo SET estado = IF(id_catalogo = ?, 'Visible', 'Oculto') WHERE id_vendedor = ?",
+      'UPDATE catalogo SET visible = (id_catalogo = ?) WHERE id_vendedor = ?',
       [conservado, idVendedor]
     );
     await conn.query(
       `UPDATE producto p
          JOIN (SELECT id_producto,
-                      ROW_NUMBER() OVER (ORDER BY fech_creacion ASC, id_producto ASC) AS rn
+                      ROW_NUMBER() OVER (ORDER BY fecha_creacion, id_producto) AS rn
                  FROM producto WHERE id_catalogo = ?) x ON x.id_producto = p.id_producto
-          SET p.estado = 'Oculto'
-        WHERE x.rn > ?`,
+          SET p.visible = 0 WHERE x.rn > ?`,
       [conservado, LIMITE_PRODUCTOS_GRATIS]
     );
   }
-  await conn.query("UPDATE ruta SET estado = 'Inactiva' WHERE id_vendedor = ?", [idVendedor]);
+  await conn.query('UPDATE ruta SET activa = 0 WHERE id_vendedor = ?', [idVendedor]);
 }
 
-// RF5.8a + RF5.8b: se restauran los mas antiguos respetando RF10.2 (3 catalogos) y RF11.2 (50 productos)
 async function restaurarContenidoVendedor(conn, idVendedor) {
-  const [cats] = await conn.query(
-    'SELECT id_catalogo, estado FROM catalogo WHERE id_vendedor = ? ORDER BY fech_creacion ASC, id_catalogo ASC FOR UPDATE',
+  const [catalogos] = await conn.query(
+    `SELECT id_catalogo, visible FROM catalogo
+      WHERE id_vendedor = ? ORDER BY fecha_creacion, id_catalogo FOR UPDATE`,
     [idVendedor]
   );
-  const visibles = cats.filter((c) => c.estado === 'Visible').length;
+  const visibles = catalogos.filter((catalogo) => Boolean(catalogo.visible)).length;
   const cupo = Math.max(0, LIMITE_CATALOGOS_PREMIUM - visibles);
-  const aRestaurar = cats.filter((c) => c.estado === 'Oculto').slice(0, cupo).map((c) => c.id_catalogo);
-  if (aRestaurar.length > 0) {
-    await conn.query("UPDATE catalogo SET estado = 'Visible' WHERE id_catalogo IN (?)", [aRestaurar]);
+  const restaurar = catalogos.filter((catalogo) => !catalogo.visible)
+    .slice(0, cupo).map((catalogo) => catalogo.id_catalogo);
+  if (restaurar.length) {
+    await conn.query('UPDATE catalogo SET visible = 1 WHERE id_catalogo IN (?)', [restaurar]);
   }
   await conn.query(
     `UPDATE producto p
        JOIN (SELECT id_producto,
-                    ROW_NUMBER() OVER (PARTITION BY id_catalogo ORDER BY fech_creacion ASC, id_producto ASC) AS rn
+                    ROW_NUMBER() OVER (PARTITION BY id_catalogo ORDER BY fecha_creacion, id_producto) AS rn
                FROM producto
-              WHERE id_catalogo IN (SELECT id_catalogo FROM catalogo WHERE id_vendedor = ? AND estado = 'Visible')) x
+              WHERE id_catalogo IN (SELECT id_catalogo FROM catalogo WHERE id_vendedor = ? AND visible = 1)) x
          ON x.id_producto = p.id_producto
-        SET p.estado = 'Visible'
-      WHERE x.rn <= ? AND p.estado = 'Oculto'`,
+        SET p.visible = 1
+      WHERE x.rn <= ? AND p.visible = 0`,
     [idVendedor, LIMITE_PRODUCTOS_PREMIUM]
   );
-  await conn.query("UPDATE ruta SET estado = 'Activa' WHERE id_vendedor = ?", [idVendedor]);
+  await conn.query('UPDATE ruta SET activa = 1 WHERE id_vendedor = ?', [idVendedor]);
 }
 
-module.exports = {
-  esVendedor, esGratuito, esPremium, calcularFechaCorte, activarPremium, degradarAGratuito,
-};
+module.exports = { activarPremium, revocarPremium, limitarContenidoVendedor, restaurarContenidoVendedor };

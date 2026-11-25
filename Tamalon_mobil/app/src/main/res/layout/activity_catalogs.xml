@@ -1,0 +1,380 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Gestión de catálogos del Vendedor — Tamalón (conectada a tamalon_db.sql: catalogo). -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/tamalon_background">
+
+    <ScrollView
+        android:id="@+id/catalogs_scroll_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="@dimen/screen_horizontal"
+            android:paddingTop="@dimen/screen_top"
+            android:paddingBottom="108dp">
+
+            <!-- Tarjeta de encabezado de Catálogos con contador visual (0 de 3) -->
+            <LinearLayout
+                style="@style/Tamalon.Card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="18dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="@drawable/bg_circle"
+                        android:contentDescription="Catálogos"
+                        android:padding="8dp"
+                        android:src="@drawable/ic_list" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/Tamalon.SectionTitle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Catálogos"
+                            android:textColor="@color/tamalon_ink"
+                            android:textSize="20sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            style="@style/Tamalon.Caption"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="Los catálogos ocultos no cuentan para tu límite"
+                            android:textColor="@color/tamalon_muted"
+                            android:textSize="9sp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/catalogs_counter_badge"
+                        style="@style/Tamalon.Caption"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_badge"
+                        android:paddingHorizontal="10dp"
+                        android:paddingVertical="5dp"
+                        android:text="0 de 1 visible"
+                        android:textColor="@color/tamalon_field_text"
+                        android:textSize="9sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <!-- Barra visual de 3 espacios de catálogo -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="6dp"
+                    android:layout_marginTop="12dp"
+                    android:orientation="horizontal">
+
+                    <View
+                        android:id="@+id/catalogs_progress_1"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="1"
+                        android:background="@color/tamalon_line" />
+
+                    <View
+                        android:id="@+id/catalogs_progress_2"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="1"
+                        android:background="@color/tamalon_line" />
+
+                    <View
+                        android:id="@+id/catalogs_progress_3"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:background="@color/tamalon_line" />
+                </LinearLayout>
+
+                <TextView
+                    style="@style/Tamalon.Body"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:lineSpacingExtra="2dp"
+                    android:text="Introduce el nombre del catálogo para publicarlo en estado Visible y administrar sus productos."
+                    android:textColor="@color/tamalon_field_text"
+                    android:textSize="10sp" />
+
+                <!-- Botón principal de Añadir catálogo (se oculta al llegar a 3) -->
+                <android.widget.Button
+                    android:id="@+id/catalogs_btn_add"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:layout_marginTop="14dp"
+                    android:background="@drawable/bg_button"
+                    android:backgroundTint="@null"
+                    android:fontFamily="@font/inter"
+                    android:text="Crear catálogo"
+                    android:textAllCaps="false"
+                    android:textColor="@color/tamalon_ink"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- Aviso claro cuando se alcanza el límite de catálogos visibles del plan -->
+            <LinearLayout
+                android:id="@+id/catalogs_limit_notice"
+                style="@style/Tamalon.Card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_badge_yellow"
+                android:orientation="vertical"
+                android:padding="14dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/catalogs_limit_title"
+                    style="@style/Tamalon.Body"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Alcanzaste el límite de catálogos de tu plan"
+                    android:textColor="#775D2F"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/catalogs_limit_desc"
+                    style="@style/Tamalon.Caption"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Oculta o elimina un catálogo visible si deseas crear uno nuevo."
+                    android:textColor="#5A4622"
+                    android:textSize="9.5sp" />
+            </LinearLayout>
+
+            <!-- Panel inline/modal: crear o editar catálogo -->
+            <LinearLayout
+                android:id="@+id/catalogs_form_panel"
+                style="@style/Tamalon.Card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/catalogs_form_title"
+                        style="@style/Tamalon.Body"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Nuevo catálogo"
+                        android:textColor="@color/tamalon_ink"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView
+                    style="@style/Tamalon.Caption"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="Nombre del catálogo (máx. 50 caracteres)"
+                    android:textColor="@color/tamalon_field_text"
+                    android:textSize="9.5sp" />
+
+                <EditText
+                    android:id="@+id/catalogs_form_name"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:layout_marginTop="6dp"
+                    android:background="@drawable/bg_input"
+                    android:hint="@string/catalogs_form_name_hint"
+                    android:inputType="textCapWords"
+                    android:maxLength="50"
+                    android:padding="10dp"
+                    android:textColor="@color/tamalon_ink"
+                    android:textColorHint="@color/tamalon_muted"
+                    android:textSize="11sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        style="@style/Tamalon.Caption"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Estado del catálogo"
+                        android:textColor="@color/tamalon_field_text"
+                        android:textSize="9.5sp" />
+
+                    <android.widget.Button
+                        android:id="@+id/catalogs_form_state_active"
+                        android:layout_width="wrap_content"
+                        android:layout_height="34dp"
+                        android:layout_marginEnd="6dp"
+                        android:background="@drawable/bg_button"
+                        android:backgroundTint="@null"
+                        android:minHeight="0dp"
+                        android:paddingHorizontal="12dp"
+                        android:text="Visible"
+                        android:textAllCaps="false"
+                        android:textColor="@color/tamalon_ink"
+                        android:textSize="9.5sp" />
+
+                    <android.widget.Button
+                        android:id="@+id/catalogs_form_state_inactive"
+                        android:layout_width="wrap_content"
+                        android:layout_height="34dp"
+                        android:background="@drawable/bg_surface_card"
+                        android:backgroundTint="@null"
+                        android:minHeight="0dp"
+                        android:paddingHorizontal="12dp"
+                        android:text="Oculto"
+                        android:textAllCaps="false"
+                        android:textColor="@color/tamalon_muted"
+                        android:textSize="9.5sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/catalogs_form_error"
+                    style="@style/Tamalon.Caption"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text=""
+                    android:textColor="@color/tamalon_error"
+                    android:textSize="9sp"
+                    android:visibility="gone" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:orientation="horizontal">
+
+                    <android.widget.Button
+                        android:id="@+id/catalogs_form_cancel"
+                        android:layout_width="0dp"
+                        android:layout_height="40dp"
+                        android:layout_marginEnd="8dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_surface_card"
+                        android:backgroundTint="@null"
+                        android:fontFamily="@font/inter"
+                        android:text="@string/btn_cancel"
+                        android:textAllCaps="false"
+                        android:textColor="@color/tamalon_field_text"
+                        android:textSize="10sp" />
+
+                    <android.widget.Button
+                        android:id="@+id/catalogs_form_save"
+                        android:layout_width="0dp"
+                        android:layout_height="40dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_button"
+                        android:backgroundTint="@null"
+                        android:fontFamily="@font/inter"
+                        android:text="Crear"
+                        android:textAllCaps="false"
+                        android:textColor="@color/tamalon_ink"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Título de sección de lista de catálogos registrados -->
+            <TextView
+                style="@style/Tamalon.Caption"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:layout_marginBottom="8dp"
+                android:text="CATÁLOGOS REGISTRADOS" />
+
+            <!-- Lista de catálogos registrados -->
+            <LinearLayout
+                android:id="@+id/catalogs_list_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+
+            <!-- Estado vacío amable si no existen catálogos registrados -->
+            <LinearLayout
+                android:id="@+id/catalogs_empty_state"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_empty"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="28dp"
+                android:visibility="gone">
+
+                <ImageView
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    android:contentDescription="Sin catálogos"
+                    android:src="@drawable/ic_list" />
+
+                <TextView
+                    style="@style/Tamalon.Body"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="Aún no tienes catálogos registrados"
+                    android:textColor="@color/tamalon_ink"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    style="@style/Tamalon.Caption"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:gravity="center"
+                    android:text="Toca «+ Añadir catálogo» para crear tu primer catálogo (máximo 3) y comenzar a agregar productos."
+                    android:textColor="@color/tamalon_muted"
+                    android:textSize="9.5sp" />
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+
+    <include
+        layout="@layout/layout_bottom_nav"
+        android:layout_width="match_parent"
+        android:layout_height="58dp"
+        android:layout_gravity="bottom"
+        android:layout_marginHorizontal="18dp"
+        android:layout_marginBottom="16dp" />
+</FrameLayout>

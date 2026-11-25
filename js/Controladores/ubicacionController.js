@@ -1,10 +1,11 @@
-const { pool } = require('../config/db');
+const { pool, transaccion } = require('../config/db');
 const C = require('../config/constantes');
 const MSG = require('../utils/mensajes');
 const { ErrorHttp, ErrorValidacion, asyncHandler } = require('../utils/errores');
 const { entero } = require('../utils/validaciones');
 
 const RADIO_MAX_KM = 10;
+const TIERRA_KM = 6371;
 
 function numeroQuery(valor) {
   if (typeof valor !== 'string' || !valor.trim()) return null;
@@ -21,149 +22,183 @@ function buscarLike(valor) {
   return `%${valor.replace(/[!%_]/g, '!$&')}%`;
 }
 
-function cajaGeografica(latitud, longitud, radioKm) {
-  const deltaLat = radioKm / 110.574;
-  const minLat = Math.max(-90, latitud - deltaLat);
-  const maxLat = Math.min(90, latitud + deltaLat);
-  const maxAbsLat = Math.max(Math.abs(minLat), Math.abs(maxLat));
-  const cosLat = maxAbsLat >= 90 ? 0 : Math.cos(maxAbsLat * Math.PI / 180);
-  const deltaLng = cosLat < 1e-12 ? 180 : Math.min(180, radioKm / (111.32 * cosLat));
-  const minLng = longitud - deltaLng;
-  const maxLng = longitud + deltaLng;
-
-  let condicionLongitud = 'uv.longitud BETWEEN ? AND ?';
-  let parametrosLongitud = [minLng, maxLng];
-  if (deltaLng >= 180) {
-    condicionLongitud = 'uv.longitud BETWEEN -180 AND 180';
-    parametrosLongitud = [];
-  } else if (minLng < -180) {
-    condicionLongitud = '(uv.longitud >= ? OR uv.longitud <= ?)';
-    parametrosLongitud = [minLng + 360, maxLng];
-  } else if (maxLng > 180) {
-    condicionLongitud = '(uv.longitud >= ? OR uv.longitud <= ?)';
-    parametrosLongitud = [minLng, maxLng - 360];
-  }
-
-  return { minLat, maxLat, condicionLongitud, parametrosLongitud };
+function distanciaMetros(a, b) {
+  const rad = (grados) => grados * Math.PI / 180;
+  const dLat = rad(b.latitud - a.latitud);
+  const dLng = rad(b.longitud - a.longitud);
+  const h = Math.sin(dLat / 2) ** 2 +
+    Math.cos(rad(a.latitud)) * Math.cos(rad(b.latitud)) * Math.sin(dLng / 2) ** 2;
+  return 2 * TIERRA_KM * 1000 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
 }
 
-const actualizarUbicacion = asyncHandler(async (req, res) => {
-  const { latitud, longitud } = req.body || {};
-  if (!validarCoordenadas(latitud, longitud)) {
-    throw new ErrorValidacion([MSG.UBICACION_INVALIDA]);
-  }
-
-  const ahora = new Date();
-  await pool.query(
-    `INSERT INTO ubi_vendedor
-       (id_vendedor, latitud, longitud, disponibilidad, ultima_actualizacion)
-     VALUES (?, ?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE
-       latitud = VALUES(latitud),
-       longitud = VALUES(longitud),
-       disponibilidad = VALUES(disponibilidad),
-       ultima_actualizacion = VALUES(ultima_actualizacion)`,
-    [req.usuario.id, latitud, longitud, 'En ruta', ahora]
+async function distanciaJornada(conn, idJornada) {
+  const [puntos] = await conn.query(
+    'SELECT latitud, longitud FROM ubicacion_historial WHERE id_jornada = ? ORDER BY registrado, id_punto',
+    [idJornada]
   );
+  let metros = 0;
+  for (let i = 1; i < puntos.length; i += 1) {
+    metros += distanciaMetros(
+      { latitud: Number(puntos[i - 1].latitud), longitud: Number(puntos[i - 1].longitud) },
+      { latitud: Number(puntos[i].latitud), longitud: Number(puntos[i].longitud) }
+    );
+  }
+  return metros / 1000;
+}
 
-  res.json({
-    mensaje: 'Ubicación actualizada',
-    ubicacion: {
-      latitud,
-      longitud,
-      disponibilidad: 'En ruta',
-      ultima_actualizacion: ahora,
-    },
+const iniciarJornada = asyncHandler(async (req, res) => {
+  const jornada = await transaccion(async (conn) => {
+    const [[vendedor]] = await conn.query(
+      'SELECT id_vendedor FROM vendedor WHERE id_vendedor = ? FOR UPDATE',
+      [req.usuario.id]
+    );
+    if (!vendedor) throw new ErrorHttp(404, MSG.VENDEDOR_NO_ENCONTRADO);
+    const [[abierta]] = await conn.query(
+      'SELECT id_jornada, inicio FROM jornada WHERE id_vendedor = ? AND fin IS NULL FOR UPDATE',
+      [req.usuario.id]
+    );
+    if (abierta) return { jornada: abierta, existente: true };
+    const [insertado] = await conn.query(
+      'INSERT INTO jornada (id_vendedor, inicio) VALUES (?, ?)',
+      [req.usuario.id, new Date()]
+    );
+    const [[nueva]] = await conn.query(
+      'SELECT id_jornada, inicio FROM jornada WHERE id_jornada = ?',
+      [insertado.insertId]
+    );
+    return { jornada: nueva, existente: false };
   });
+  res.status(jornada.existente ? 200 : 201).json(jornada.jornada);
 });
 
-const fueraDeRuta = asyncHandler(async (req, res) => {
-  await pool.query(
-    'UPDATE ubi_vendedor SET disponibilidad = ? WHERE id_vendedor = ?',
-    ['Fuera de ruta', req.usuario.id]
-  );
-  res.json({ mensaje: 'Fuera de ruta', disponibilidad: 'Fuera de ruta' });
+const finalizarJornada = asyncHandler(async (req, res) => {
+  const resultado = await transaccion(async (conn) => {
+    const [[jornada]] = await conn.query(
+      'SELECT id_jornada, inicio FROM jornada WHERE id_vendedor = ? AND fin IS NULL FOR UPDATE',
+      [req.usuario.id]
+    );
+    if (!jornada) throw new ErrorHttp(409, 'No hay una jornada abierta');
+    const fin = new Date();
+    await conn.query('UPDATE jornada SET fin = ? WHERE id_jornada = ?', [fin, jornada.id_jornada]);
+    const km = await distanciaJornada(conn, jornada.id_jornada);
+    const minutos = Math.max(0, Math.round((fin.getTime() - new Date(jornada.inicio).getTime()) / 60000));
+    return { id_jornada: jornada.id_jornada, fin, minutos, km: Number(km.toFixed(3)) };
+  });
+  res.json(resultado);
+});
+
+const actualizarUbicacion = asyncHandler(async (req, res) => {
+  const puntos = req.body?.puntos;
+  if (!Array.isArray(puntos) || puntos.length < 1 || puntos.length > 20) {
+    throw new ErrorValidacion(['Dato inválido en Puntos: debe contener de 1 a 20 ubicaciones']);
+  }
+  const validos = puntos.map((punto) => {
+    const t = punto?.t;
+    const fecha = new Date(t);
+    if (!validarCoordenadas(punto?.latitud, punto?.longitud) ||
+        !Number.isSafeInteger(t) || Number.isNaN(fecha.getTime()) ||
+        (punto.precision_m !== undefined &&
+          (typeof punto.precision_m !== 'number' || !Number.isFinite(punto.precision_m) || punto.precision_m < 0))) {
+      throw new ErrorValidacion([MSG.UBICACION_INVALIDA]);
+    }
+    return { latitud: punto.latitud, longitud: punto.longitud, precision_m: punto.precision_m ?? null, fecha };
+  }).sort((a, b) => a.fecha - b.fecha);
+
+  const recibidos = await transaccion(async (conn) => {
+    const [[jornada]] = await conn.query(
+      'SELECT id_jornada FROM jornada WHERE id_vendedor = ? AND fin IS NULL FOR UPDATE',
+      [req.usuario.id]
+    );
+    if (!jornada) throw new ErrorHttp(409, 'Debes iniciar una jornada antes de reportar ubicación');
+
+    let [[ultimo]] = await conn.query(
+      `SELECT latitud, longitud, registrado
+         FROM ubicacion_historial
+        WHERE id_jornada = ?
+        ORDER BY registrado DESC, id_punto DESC LIMIT 1`,
+      [jornada.id_jornada]
+    );
+    for (const punto of validos) {
+      const distancia = ultimo ? distanciaMetros(
+        { latitud: Number(ultimo.latitud), longitud: Number(ultimo.longitud) },
+        punto
+      ) : Infinity;
+      const segundos = ultimo ? (punto.fecha.getTime() - new Date(ultimo.registrado).getTime()) / 1000 : Infinity;
+      if (!ultimo || distancia >= C.MIN_GPS_METROS || segundos >= C.MIN_GPS_SEG) {
+        await conn.query(
+          `INSERT INTO ubicacion_historial (id_jornada, latitud, longitud, registrado)
+           VALUES (?, ?, ?, ?)`,
+          [jornada.id_jornada, punto.latitud, punto.longitud, punto.fecha]
+        );
+        ultimo = { ...punto, registrado: punto.fecha };
+      }
+    }
+
+    const masReciente = validos[validos.length - 1];
+    await conn.query(
+      `INSERT INTO ubicacion_actual (id_vendedor, latitud, longitud, precision_m)
+       VALUES (?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE latitud = VALUES(latitud), longitud = VALUES(longitud),
+                               precision_m = VALUES(precision_m), actualizado = CURRENT_TIMESTAMP(3)`,
+      [req.usuario.id, masReciente.latitud, masReciente.longitud, masReciente.precision_m]
+    );
+    return validos.length;
+  });
+  res.json({ en_ruta: true, recibido: recibidos });
 });
 
 const obtenerCercanos = asyncHandler(async (req, res) => {
   const latitud = numeroQuery(req.query.lat);
   const longitud = numeroQuery(req.query.lng);
   const radioKm = req.query.radio_km === undefined ? 3 : numeroQuery(req.query.radio_km);
-  const categoria = req.query.categoria;
+  const idTipo = req.query.id_tipo_vendedor === undefined ? null : entero(req.query.id_tipo_vendedor);
   const buscar = req.query.buscar;
   if (!validarCoordenadas(latitud, longitud) ||
       radioKm === null || radioKm <= 0 || radioKm > RADIO_MAX_KM ||
-      (categoria !== undefined && (typeof categoria !== 'string' || categoria.length > 50)) ||
+      (req.query.id_tipo_vendedor !== undefined && idTipo === null) ||
       (buscar !== undefined && (typeof buscar !== 'string' || buscar.length > 100))) {
     throw new ErrorValidacion([MSG.FILTRO_UBICACION_INVALIDO]);
   }
 
-  const caja = cajaGeografica(latitud, longitud, radioKm);
-  const ahora = new Date();
-  const limiteVigencia = new Date(ahora.getTime() - C.UBICACION_VIGENCIA_SEG * 1000);
-  const condiciones = [
-    'u.estado_cuenta = ?',
-    'uv.disponibilidad = ?',
-    'uv.ultima_actualizacion >= ?',
-    'uv.latitud BETWEEN ? AND ?',
-    caja.condicionLongitud,
-  ];
-  const parametros = [
-    C.ESTADOS_CUENTA.ACTIVA,
-    'En ruta',
-    limiteVigencia,
-    caja.minLat,
-    caja.maxLat,
-    ...caja.parametrosLongitud,
-  ];
-
-  if (categoria) {
-    condiciones.push(
-      `EXISTS (
-         SELECT 1 FROM catalogo c
-         JOIN producto p ON p.id_catalogo = c.id_catalogo
-        WHERE c.id_vendedor = u.id_usuario AND c.estado = 'Visible'
-          AND p.estado = 'Visible' AND p.categoria = ?
-       )`
-    );
-    parametros.push(categoria);
+  const limiteVigencia = new Date(Date.now() - C.UBICACION_VIGENCIA_SEG * 1000);
+  const condiciones = ['j.fin IS NULL', 'ua.actualizado >= ?', 'u.id_estado_cuenta = 1'];
+  const parametros = [limiteVigencia];
+  if (idTipo !== null) {
+    condiciones.push('v.id_tipo_vendedor = ?');
+    parametros.push(idTipo);
   }
-
   if (buscar) {
     const patron = buscarLike(buscar);
-    condiciones.push(
-      `(u.nombre_completo LIKE ? ESCAPE '!'
-        OR EXISTS (
-          SELECT 1 FROM catalogo c
-          JOIN producto p ON p.id_catalogo = c.id_catalogo
-         WHERE c.id_vendedor = u.id_usuario AND c.estado = 'Visible'
-           AND p.estado = 'Visible' AND p.nombre LIKE ? ESCAPE '!'
-        ))`
-    );
+    condiciones.push(`(CONCAT(u.nombre, ' ', u.apellidos) LIKE ? ESCAPE '!'
+      OR EXISTS (SELECT 1 FROM catalogo c JOIN producto p ON p.id_catalogo = c.id_catalogo
+        WHERE c.id_vendedor = v.id_vendedor AND c.visible = 1 AND p.visible = 1
+          AND p.nombre LIKE ? ESCAPE '!'))`);
     parametros.push(patron, patron);
   }
-
-  const [vendedores] = await pool.query(
+  const [filas] = await pool.query(
     `SELECT * FROM (
-       SELECT u.id_usuario, u.nombre_completo, u.foto_perfil, v.plan,
-              CONCAT('Vendedor ', v.plan) AS rol,
-              uv.latitud, uv.longitud, uv.ultima_actualizacion,
-              ST_Distance_Sphere(POINT(?, ?), POINT(uv.longitud, uv.latitud)) AS distancia_m
-         FROM ubi_vendedor uv
-         JOIN vendedor v ON v.id_vendedor = uv.id_vendedor
-         JOIN usuarios u ON u.id_usuario = v.id_vendedor
+       SELECT u.id_usuario, CONCAT(u.nombre, ' ', u.apellidos) AS nombre_completo,
+              u.foto_perfil, (pv.id_vendedor IS NOT NULL) AS es_premium,
+              v.id_tipo_vendedor, tv.nombre AS tipo_vendedor, tv.icono AS icono_vendedor,
+              ua.latitud, ua.longitud, ua.actualizado AS ultima_actualizacion,
+              ST_Distance_Sphere(POINT(?, ?), POINT(ua.longitud, ua.latitud)) AS distancia_m
+         FROM jornada j
+         JOIN vendedor v ON v.id_vendedor = j.id_vendedor
+         JOIN usuario u ON u.id_usuario = v.id_vendedor
+         JOIN tipo_vendedor tv ON tv.id_tipo_vendedor = v.id_tipo_vendedor
+         LEFT JOIN premium_vendedor pv ON pv.id_vendedor = v.id_vendedor
+         JOIN ubicacion_actual ua ON ua.id_vendedor = v.id_vendedor
         WHERE ${condiciones.join(' AND ')}
-     ) AS candidatos
+     ) candidatos
       WHERE distancia_m <= ?
-      ORDER BY distancia_m ASC
-      LIMIT 50`,
+      ORDER BY distancia_m LIMIT 50`,
     [longitud, latitud, ...parametros, radioKm * 1000]
   );
-
   res.json({
-    vendedores: vendedores.map((vendedor) => ({
-      ...vendedor,
-      distancia_m: Number(vendedor.distancia_m),
+    vendedores: filas.map((fila) => ({
+      ...fila,
+      es_premium: Boolean(fila.es_premium),
+      distancia_m: Number(fila.distancia_m),
     })),
   });
 });
@@ -171,25 +206,18 @@ const obtenerCercanos = asyncHandler(async (req, res) => {
 const obtenerUbicacionVendedor = asyncHandler(async (req, res) => {
   const idVendedor = entero(req.params.id);
   if (idVendedor === null) throw new ErrorHttp(400, MSG.FILTRO_UBICACION_INVALIDO);
-
-  const ahora = new Date();
-  const limiteVigencia = new Date(ahora.getTime() - C.UBICACION_VIGENCIA_SEG * 1000);
-  const [filas] = await pool.query(
-    `SELECT uv.latitud, uv.longitud, uv.ultima_actualizacion
-       FROM vendedor v
-       JOIN usuarios u ON u.id_usuario = v.id_vendedor
-       LEFT JOIN ubi_vendedor uv
-         ON uv.id_vendedor = v.id_vendedor
-        AND uv.disponibilidad = ?
-        AND uv.ultima_actualizacion >= ?
-      WHERE u.id_usuario = ? AND u.estado_cuenta = ?
-      LIMIT 1`,
-    ['En ruta', limiteVigencia, idVendedor, C.ESTADOS_CUENTA.ACTIVA]
+  const limiteVigencia = new Date(Date.now() - C.UBICACION_VIGENCIA_SEG * 1000);
+  const [[vendedor]] = await pool.query(
+    `SELECT (j.id_jornada IS NOT NULL AND ua.actualizado >= ?) AS en_ruta,
+            ua.latitud, ua.longitud, ua.actualizado AS ultima_actualizacion
+       FROM vendedor v JOIN usuario u ON u.id_usuario = v.id_vendedor
+       LEFT JOIN jornada j ON j.id_vendedor = v.id_vendedor AND j.fin IS NULL
+       LEFT JOIN ubicacion_actual ua ON ua.id_vendedor = v.id_vendedor
+      WHERE v.id_vendedor = ? AND u.id_estado_cuenta = 1`,
+    [limiteVigencia, idVendedor]
   );
-  const vendedor = filas[0];
   if (!vendedor) throw new ErrorHttp(404, MSG.VENDEDOR_NO_ENCONTRADO);
-  if (vendedor.ultima_actualizacion === null) return res.json({ en_ruta: false });
-
+  if (!vendedor.en_ruta) return res.json({ en_ruta: false });
   res.json({
     en_ruta: true,
     latitud: vendedor.latitud,
@@ -200,53 +228,41 @@ const obtenerUbicacionVendedor = asyncHandler(async (req, res) => {
 
 const listarVendedores = asyncHandler(async (req, res) => {
   const pagina = req.query.pagina === undefined ? 1 : entero(req.query.pagina);
-  const limiteSolicitado = req.query.limite === undefined ? 20 : entero(req.query.limite);
+  const limite = req.query.limite === undefined ? 20 : entero(req.query.limite);
   const buscar = req.query.buscar;
-  if (pagina === null || limiteSolicitado === null || limiteSolicitado > 50 ||
+  if (!Number.isSafeInteger(pagina) || pagina < 1 || !Number.isSafeInteger(limite) || limite < 1 || limite > 50 ||
       (buscar !== undefined && (typeof buscar !== 'string' || buscar.length > 100))) {
     throw new ErrorValidacion([MSG.FILTRO_UBICACION_INVALIDO]);
   }
-
-  const limite = limiteSolicitado;
-  const offset = (pagina - 1) * limite;
-  if (!Number.isSafeInteger(offset)) throw new ErrorValidacion([MSG.FILTRO_UBICACION_INVALIDO]);
-
-  const condiciones = ['u.estado_cuenta = ?'];
-  const parametros = [C.ESTADOS_CUENTA.ACTIVA];
+  const where = ['u.id_estado_cuenta = 1'];
+  const params = [];
   if (buscar) {
-    condiciones.push("u.nombre_completo LIKE ? ESCAPE '!'");
-    parametros.push(buscarLike(buscar));
+    where.push("CONCAT(u.nombre, ' ', u.apellidos) LIKE ? ESCAPE '!'");
+    params.push(buscarLike(buscar));
   }
-
-  const ahora = new Date();
-  const limiteVigencia = new Date(ahora.getTime() - C.UBICACION_VIGENCIA_SEG * 1000);
+  const offset = (pagina - 1) * limite;
   const [filas] = await pool.query(
-    `SELECT u.id_usuario, u.nombre_completo, u.foto_perfil, v.plan,
-            CONCAT('Vendedor ', v.plan) AS rol,
-            CASE WHEN uv.id_vendedor IS NOT NULL THEN 1 ELSE 0 END AS en_ruta
-       FROM vendedor v
-       JOIN usuarios u ON u.id_usuario = v.id_vendedor
-       LEFT JOIN ubi_vendedor uv
-         ON uv.id_vendedor = v.id_vendedor
-        AND uv.disponibilidad = ?
-        AND uv.ultima_actualizacion >= ?
-      WHERE ${condiciones.join(' AND ')}
-      ORDER BY u.nombre_completo ASC, u.id_usuario ASC
-      LIMIT ? OFFSET ?`,
-    ['En ruta', limiteVigencia, ...parametros, limite, offset]
+    `SELECT u.id_usuario, CONCAT(u.nombre, ' ', u.apellidos) AS nombre_completo,
+            u.foto_perfil, (pv.id_vendedor IS NOT NULL) AS es_premium,
+            v.id_tipo_vendedor, tv.nombre AS tipo_vendedor, tv.icono AS icono_vendedor,
+            (j.id_jornada IS NOT NULL AND ua.actualizado >= ?) AS en_ruta
+       FROM vendedor v JOIN usuario u ON u.id_usuario = v.id_vendedor
+       JOIN tipo_vendedor tv ON tv.id_tipo_vendedor = v.id_tipo_vendedor
+       LEFT JOIN premium_vendedor pv ON pv.id_vendedor = v.id_vendedor
+       LEFT JOIN jornada j ON j.id_vendedor = v.id_vendedor AND j.fin IS NULL
+       LEFT JOIN ubicacion_actual ua ON ua.id_vendedor = v.id_vendedor
+      WHERE ${where.join(' AND ')}
+      ORDER BY u.nombre, u.apellidos, u.id_usuario LIMIT ? OFFSET ?`,
+    [new Date(Date.now() - C.UBICACION_VIGENCIA_SEG * 1000), ...params, limite, offset]
   );
-
   res.json({
-    vendedores: filas.map((vendedor) => ({ ...vendedor, en_ruta: Boolean(vendedor.en_ruta) })),
+    vendedores: filas.map((fila) => ({ ...fila, es_premium: Boolean(fila.es_premium), en_ruta: Boolean(fila.en_ruta) })),
     pagina,
     limite,
   });
 });
 
 module.exports = {
-  actualizarUbicacion,
-  fueraDeRuta,
-  obtenerCercanos,
-  obtenerUbicacionVendedor,
-  listarVendedores,
+  iniciarJornada, finalizarJornada, actualizarUbicacion, obtenerCercanos,
+  obtenerUbicacionVendedor, listarVendedores,
 };

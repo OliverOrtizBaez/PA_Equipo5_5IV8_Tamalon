@@ -7,6 +7,7 @@ const { verificarSesion } = require('../middlewares/autenticacion');
 router.use(verificarSesion);
 
 router.get('/perfil', usuario.obtenerPerfil);            // Datos del usuario logueado
+router.get('/me', usuario.obtenerMe);
 router.put('/perfil', usuario.actualizarPerfil);         // Nombre, teléfono
 router.put('/foto', usuario.actualizarFotoPerfil);       // Subir o cambiar foto de perfil
 router.get('/vendedores', ubicacion.listarVendedores);

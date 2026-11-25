@@ -1,10 +1,4 @@
-// Registro en memoria de las conexiones WebSocket autenticadas.
-// Sirve para EMPUJAR al cliente el cierre de su sesion en el instante en que ocurre
-// (suspension, cambio de contrasena, logout en otra pestana...), sin esperar a que haga una peticion.
-//
-// LIMITE: vive en la memoria de UN proceso. Si algun dia se corren varias instancias del
-// servidor, hace falta un bus compartido (Redis pub/sub, etc.). La revalidacion periodica de
-// authSocket.js actua como red de seguridad mientras tanto.
+
 const MSG = require('../utils/mensajes');
 
 // Codigos de cierre WebSocket (4000-4999 son de uso privado de la aplicacion)

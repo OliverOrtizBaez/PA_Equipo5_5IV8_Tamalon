@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/tamalon_background"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        style="@style/Tamalon.SectionTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Mi Negocio - Estadísticas"
+        android:textColor="@color/tamalon_ink" />
+
+    <View
+        android:id="@+id/estadisticas_locked_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        android:background="@color/tamalon_background" />
+
+    <LinearLayout
+        android:id="@+id/estadisticas_content_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:visibility="visible">
+
+        <TextView
+            android:id="@+id/estadisticas_summary_text"
+            style="@style/Tamalon.Body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Cargando estadísticas..." />
+
+        <com.tamalon.app.ui.BarChartCustomView
+            android:id="@+id/estadisticas_chart_view"
+            android:layout_width="match_parent"
+            android:layout_height="300dp"
+            android:layout_marginTop="24dp" />
+    </LinearLayout>
+
+</LinearLayout>

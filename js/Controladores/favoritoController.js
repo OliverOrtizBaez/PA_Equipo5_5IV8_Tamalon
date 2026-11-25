@@ -3,9 +3,9 @@ const C = require('../config/constantes');
 const { ErrorHttp, asyncHandler } = require('../utils/errores');
 const { entero } = require('../utils/validaciones');
 
-function validarClientePremium(req) {
-  if (req.usuario.tipo !== C.TIPOS.CLIENTE || req.usuario.plan !== C.PLANES.PREMIUM) {
-    throw new ErrorHttp(403, 'Los favoritos están disponibles para cuentas de cliente Premium');
+function validarCliente(req) {
+  if (req.usuario.tipo !== C.TIPOS.CLIENTE) {
+    throw new ErrorHttp(403, 'Los favoritos están disponibles para cuentas de cliente');
   }
 }
 
@@ -16,11 +16,11 @@ function leerIdVendedor(valor) {
 }
 
 const obtenerFavoritosCliente = asyncHandler(async (req, res) => {
-  validarClientePremium(req);
+  validarCliente(req);
   const [favoritos] = await pool.query(
     `SELECT f.id_favorito, u.id_usuario AS id_vendedor, u.nombre_completo, u.foto_perfil
        FROM favorito f
-       JOIN usuarios u ON u.id_usuario = f.id_vendedor
+       JOIN vw_usuario u ON u.id_usuario = f.id_vendedor
       WHERE f.id_cliente = ?
       ORDER BY f.id_favorito DESC`,
     [req.usuario.id]
@@ -29,7 +29,7 @@ const obtenerFavoritosCliente = asyncHandler(async (req, res) => {
 });
 
 const verificarEsFavorito = asyncHandler(async (req, res) => {
-  validarClientePremium(req);
+  validarCliente(req);
   const idVendedor = leerIdVendedor(req.params.vendedorId);
   const [[fila]] = await pool.query(
     'SELECT 1 AS es_favorito FROM favorito WHERE id_cliente = ? AND id_vendedor = ? LIMIT 1',
@@ -39,18 +39,16 @@ const verificarEsFavorito = asyncHandler(async (req, res) => {
 });
 
 const agregarFavorito = asyncHandler(async (req, res) => {
-  validarClientePremium(req);
+  validarCliente(req);
   const idVendedor = leerIdVendedor(req.params.vendedorId);
   if (idVendedor === req.usuario.id) throw new ErrorHttp(400, 'No puedes agregarte como favorito');
 
   const resultado = await transaccion(async (conn) => {
     const [[cliente]] = await conn.query(
-      'SELECT plan FROM cliente WHERE id_cliente = ? FOR UPDATE',
+      'SELECT id_cliente FROM cliente WHERE id_cliente = ? FOR UPDATE',
       [req.usuario.id]
     );
-    if (!cliente || cliente.plan !== C.PLANES.PREMIUM) {
-      throw new ErrorHttp(403, 'Los favoritos están disponibles para cuentas de cliente Premium');
-    }
+    if (!cliente) throw new ErrorHttp(403, 'Los favoritos están disponibles para cuentas de cliente');
 
     const [[vendedor]] = await conn.query(
       'SELECT 1 AS existe FROM vendedor WHERE id_vendedor = ? LIMIT 1',
@@ -69,13 +67,17 @@ const agregarFavorito = asyncHandler(async (req, res) => {
       [req.usuario.id, idVendedor]
     );
     if (existente) return { existente: true };
-    if (total >= C.LIMITE_FAVORITOS_PREMIUM) {
-      throw new ErrorHttp(409, `El límite de favoritos es ${C.LIMITE_FAVORITOS_PREMIUM}`);
+    if (total >= C.LIMITE_FAVORITOS) {
+      throw new ErrorHttp(409, `El límite de favoritos es ${C.LIMITE_FAVORITOS}`);
     }
 
     const [insertado] = await conn.query(
       'INSERT INTO favorito (id_cliente, id_vendedor) VALUES (?, ?)',
       [req.usuario.id, idVendedor]
+    );
+    await conn.query(
+      'INSERT INTO evento_vendedor (id_vendedor, id_tipo_evento, id_cliente) VALUES (?, 4, ?)',
+      [idVendedor, req.usuario.id]
     );
     return { idFavorito: insertado.insertId };
   });
@@ -87,13 +89,19 @@ const agregarFavorito = asyncHandler(async (req, res) => {
 });
 
 const eliminarFavorito = asyncHandler(async (req, res) => {
-  validarClientePremium(req);
+  validarCliente(req);
   const idVendedor = leerIdVendedor(req.params.vendedorId);
-  const [resultado] = await pool.query(
-    'DELETE FROM favorito WHERE id_cliente = ? AND id_vendedor = ?',
-    [req.usuario.id, idVendedor]
-  );
-  if (!resultado.affectedRows) throw new ErrorHttp(404, 'El vendedor no está en tus favoritos');
+  await transaccion(async (conn) => {
+    const [resultado] = await conn.query(
+      'DELETE FROM favorito WHERE id_cliente = ? AND id_vendedor = ?',
+      [req.usuario.id, idVendedor]
+    );
+    if (!resultado.affectedRows) throw new ErrorHttp(404, 'El vendedor no está en tus favoritos');
+    await conn.query(
+      'INSERT INTO evento_vendedor (id_vendedor, id_tipo_evento, id_cliente) VALUES (?, 5, ?)',
+      [idVendedor, req.usuario.id]
+    );
+  });
   res.json({ mensaje: 'Vendedor eliminado de favoritos' });
 });
 

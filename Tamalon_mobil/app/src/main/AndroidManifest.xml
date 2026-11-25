@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application
+        android:name=".TamalonApp"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Tamalon">
+
+        <service
+            android:name=".location.UbicacionService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
+
+        <activity android:name=".ui.MapaActivity" android:exported="false" />
+        <activity android:name=".ui.LoginActivity" android:exported="false" />
+        <activity android:name=".ui.RegistroActivity" android:exported="false" />
+        <activity android:name=".ui.RecuperacionActivity" android:exported="false" />
+        <activity android:name=".ui.PagoActivity" android:exported="false" />
+        <activity android:name=".ui.PremiumActivity" android:exported="false" />
+        <activity android:name=".ui.ReporteActivity" android:exported="false" />
+        <activity android:name=".ui.ClienteDetailActivity" android:exported="false" />
+        <activity android:name=".ui.VendedorDetailActivity" android:exported="false" />
+        <activity android:name=".ui.CatalogoPublicoActivity" android:exported="false" />
+        <activity android:name=".ui.PerfilActivity" android:exported="false" />
+        <activity android:name=".ui.PerfilSeccionActivity" android:exported="false" />
+        <activity android:name=".ui.FavoritosActivity" android:exported="false" />
+        <activity android:name=".ui.ListaVendedoresActivity" android:exported="false" />
+        <activity android:name=".ui.CatalogoActivity" android:exported="false" />
+        <activity android:name=".ui.CatalogoProductosActivity" android:exported="false" />
+        <activity android:name=".ui.ProductoFormActivity" android:exported="false" />
+        <activity android:name=".ui.RutasActivity" android:exported="false" />
+        <activity android:name=".ui.EstadisticasActivity" android:exported="false" />
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

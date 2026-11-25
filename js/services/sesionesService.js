@@ -24,10 +24,14 @@ const sesionInvalida = () => new ErrorHttp(401, MSG.SESION_INVALIDA);
  */
 async function reactivarSiVencio(idUsuario) {
   const [r] = await pool.query(
-    `UPDATE usuarios SET estado_cuenta = ?, fin_suspension = NULL
-      WHERE id_usuario = ? AND estado_cuenta = ? AND fin_suspension IS NOT NULL AND fin_suspension <= ?`,
-    [C.ESTADOS_CUENTA.ACTIVA, idUsuario, C.ESTADOS_CUENTA.SUSPENDIDA_TEMP, new Date()]
+    `UPDATE usuario u
+       JOIN suspension s ON s.id_usuario = u.id_usuario
+       JOIN estado_cuenta ec ON ec.nombre = ?
+        SET u.id_estado_cuenta = ec.id_estado_cuenta
+      WHERE u.id_usuario = ? AND s.fin <= ?`,
+    [C.ESTADOS_CUENTA.ACTIVA, idUsuario, new Date()]
   );
+  if (r.affectedRows) await pool.query('DELETE FROM suspension WHERE id_usuario = ?', [idUsuario]);
   return r.affectedRows > 0;
 }
 
@@ -43,8 +47,9 @@ async function iniciarSesion({ correo, contrasena, zona_horaria } = {}) {
   }
 
   const [filas] = await pool.query(
-    `SELECT u.id_usuario, u.nombre_completo, u.correo, u.telefono, u.foto_perfil, u.contrasena,
-            u.tipo, u.plan, u.rol, u.estado_cuenta, u.zona_horaria,
+    `SELECT u.id_usuario, u.nombre, u.apellidos, u.correo, u.telefono, u.foto_perfil, u.contrasena,
+            u.rol, u.es_premium, u.estado_cuenta, u.zona_horaria, u.id_tipo_vendedor,
+            u.tipo_vendedor, u.icono_vendedor, u.premium_desde,
             COALESCE(ca.intentos_fallidos, 0) AS intentos_fallidos, ca.ultimo_intento
        FROM vw_usuario u
        LEFT JOIN control_acceso ca ON ca.id_usuario = u.id_usuario
@@ -92,14 +97,14 @@ async function iniciarSesion({ correo, contrasena, zona_horaria } = {}) {
     'UPDATE control_acceso SET intentos_fallidos = 0, inicio_intentos = NULL, ultimo_intento = NULL WHERE id_usuario = ?',
     [u.id_usuario]
   );
-  await pool.query('UPDATE usuarios SET zona_horaria = ? WHERE id_usuario = ?', [zona, u.id_usuario]);
+  await pool.query('UPDATE usuario SET zona_horaria = ? WHERE id_usuario = ?', [zona, u.id_usuario]);
   const [ins] = await pool.query(
-    'INSERT INTO sesion (id_usuario, token, fech_hrs_login, fecha_expiracion) VALUES (?, ?, ?, ?)',
+    'INSERT INTO sesion (id_usuario, token, fecha_login, fecha_expiracion) VALUES (?, ?, ?, ?)',
     [u.id_usuario, hashToken(jti), ahora, expira]
   );
 
   try {
-    await pool.query('INSERT INTO registro_login (id_usuario, fech_hrs) VALUES (?, ?)', [u.id_usuario, ahora]);
+    await pool.query('INSERT INTO registro_login (id_usuario, fecha) VALUES (?, ?)', [u.id_usuario, ahora]);
   } catch (err) {
     console.error('[registro_login] no se pudo guardar el inicio de sesión:', err.message);
   }
@@ -113,13 +118,19 @@ async function iniciarSesion({ correo, contrasena, zona_horaria } = {}) {
     expira: expira.toISOString(),
     usuario: {
       id_usuario: u.id_usuario,
-      nombre_completo: u.nombre_completo,
+      nombre: u.nombre,
+      apellidos: u.apellidos,
       correo: u.correo,
       telefono: u.telefono,
       foto_perfil: u.foto_perfil,
       rol: u.rol,
-      tipo: u.tipo,
-      plan: u.plan,
+      es_premium: Boolean(u.es_premium),
+      ...(u.id_tipo_vendedor && {
+        id_tipo_vendedor: u.id_tipo_vendedor,
+        tipo_vendedor: u.tipo_vendedor,
+        icono_vendedor: u.icono_vendedor,
+      }),
+      ...(u.premium_desde && { premium_desde: u.premium_desde }),
       estado_cuenta: estado,
       zona_horaria: zona,
     },
@@ -141,8 +152,9 @@ async function validarToken(token) {
 
   const [filas] = await pool.query(
     `SELECT s.id_sesion, s.fecha_expiracion,
-            u.id_usuario, u.nombre_completo, u.correo, u.telefono, u.foto_perfil, u.tipo, u.plan, u.rol,
-            u.estado_cuenta, u.fin_suspension, u.zona_horaria
+            u.id_usuario, u.nombre, u.apellidos, u.correo, u.telefono, u.foto_perfil, u.rol,
+            u.es_premium, u.estado_cuenta, u.fin_suspension, u.zona_horaria, u.id_tipo_vendedor,
+            u.tipo_vendedor, u.icono_vendedor, u.premium_desde
        FROM sesion s JOIN vw_usuario u ON u.id_usuario = s.id_usuario
       WHERE s.token = ? AND s.id_usuario = ? LIMIT 1`,
     [hashToken(claims.jti), claims.idUsuario]
@@ -175,24 +187,29 @@ async function validarToken(token) {
     expiraMs,
     usuario: {
       id: f.id_usuario,
-      nombre: f.nombre_completo,
       correo: f.correo,
-      tipo: f.tipo,
-      plan: f.plan,
+      tipo: f.rol,
       rol: f.rol,
+      esPremium: Boolean(f.es_premium),
       estado,
       zonaHoraria: f.zona_horaria,
     },
     // misma forma que el "usuario" que devuelve el login
     perfil: {
       id_usuario: f.id_usuario,
-      nombre_completo: f.nombre_completo,
+      nombre: f.nombre,
+      apellidos: f.apellidos,
       correo: f.correo,
       telefono: f.telefono,
       foto_perfil: f.foto_perfil,
       rol: f.rol,
-      tipo: f.tipo,
-      plan: f.plan,
+      es_premium: Boolean(f.es_premium),
+      ...(f.id_tipo_vendedor && {
+        id_tipo_vendedor: f.id_tipo_vendedor,
+        tipo_vendedor: f.tipo_vendedor,
+        icono_vendedor: f.icono_vendedor,
+      }),
+      ...(f.premium_desde && { premium_desde: f.premium_desde }),
       estado_cuenta: estado,
       zona_horaria: f.zona_horaria,
     },
@@ -224,7 +241,7 @@ async function revalidarConexiones() {
 
   const [filas] = await pool.query(
     `SELECT s.token, s.fecha_expiracion, u.estado_cuenta
-       FROM sesion s JOIN usuarios u ON u.id_usuario = s.id_usuario
+       FROM sesion s JOIN vw_usuario u ON u.id_usuario = s.id_usuario
       WHERE s.token IN (?)`,
     [[...new Set(conns.map((c) => c.hashJti))]]
   );

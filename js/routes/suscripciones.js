@@ -4,7 +4,7 @@ const { verificarSesion } = require('../middlewares/autenticacion');
 
 router.use(verificarSesion);
 
-router.get('/mi-plan', suscripcion.obtenerSuscripcion);         // Consultar estado de suscripción
-router.post('/procesar-pago', suscripcion.procesarPagoPremium);  // Confirmar pago y subir a Premium
+router.get('/mia', suscripcion.obtenerSuscripcion);
+router.post('/pagar', suscripcion.procesarPagoPremium);
 
 module.exports = router;

@@ -22,6 +22,11 @@ const REGLAS = {
     regla: 'de 2 a 100 letras (sin números)',
     ok: (v) => typeof v === 'string' && v.trim().length >= 2 && v.trim().length <= 100 && NOMBRE_RE.test(v.trim()),
   },
+  apellidos: {
+    etiqueta: 'Apellidos',
+    regla: 'de 2 a 100 letras (sin números)',
+    ok: (v) => typeof v === 'string' && v.trim().length >= 2 && v.trim().length <= 100 && NOMBRE_RE.test(v.trim()),
+  },
   telefono: {                                     // RV-04
     etiqueta: 'Teléfono',
     regla: '10 dígitos numéricos',

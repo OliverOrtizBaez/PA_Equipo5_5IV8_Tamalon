@@ -1,40 +1,35 @@
+const crypto = require('crypto');
 const { pool, transaccion } = require('../config/db');
 const C = require('../config/constantes');
 const MSG = require('../utils/mensajes');
-const { ErrorHttp, asyncHandler } = require('../utils/errores');
+const { ErrorHttp, ErrorValidacion, asyncHandler } = require('../utils/errores');
 const S = require('../services/suscripcionService');
-const F = require('../utils/fechas');
 
 const obtenerSuscripcion = asyncHandler(async (req, res) => {
-  const [[usuario]] = await pool.query(
-    'SELECT tipo, plan, rol, fecha_corte, renovacion FROM vw_usuario WHERE id_usuario = ? LIMIT 1',
-    [req.usuario.id]
-  );
-  if (!usuario) throw new ErrorHttp(404, 'La cuenta no existe');
-
-  const [pagos] = await pool.query(
-    `SELECT id_suscripcion, tipo, estado_pago, suscrs_monto, moneda, codigo_transaccion, fech_pago
-       FROM suscripcion
-      WHERE id_usuario = ?
-      ORDER BY fech_pago DESC, id_suscripcion DESC`,
-    [req.usuario.id]
-  );
+  let esPremium = false;
+  let premiumDesde = null;
+  if (req.usuario.tipo === C.TIPOS.VENDEDOR) {
+    const [[estado]] = await pool.query(
+      'SELECT es_premium, premium_desde FROM vw_usuario WHERE id_usuario = ?',
+      [req.usuario.id]
+    );
+    if (!estado) throw new ErrorHttp(404, 'La cuenta no existe');
+    esPremium = Boolean(estado.es_premium);
+    premiumDesde = estado.premium_desde;
+  }
   res.json({
-    tipo: usuario.tipo,
-    rol: usuario.rol,
-    plan: usuario.plan,
-    fecha_corte: usuario.fecha_corte,
-    renovacion: Boolean(usuario.renovacion),
-    pago_simulado_habilitado: process.env.PAGOS_MODO === 'demo',
-    pagos,
+    es_premium: esPremium,
+    premium_desde: premiumDesde,
+    precio: C.PRECIO_PREMIUM,
+    moneda: 'MXN',
+    pago_demo_habilitado: process.env.PAGOS_MODO === 'demo',
   });
 });
 
 const procesarPagoPremium = asyncHandler(async (req, res) => {
-  if (![C.TIPOS.VENDEDOR, C.TIPOS.CLIENTE].includes(req.usuario.tipo)) {
-    throw new ErrorHttp(403, 'Las cuentas de administrador no pueden contratar una suscripción');
+  if (req.usuario.tipo !== C.TIPOS.VENDEDOR) {
+    throw new ErrorHttp(403, 'Solo los vendedores pueden adquirir Premium');
   }
-
   if (process.env.PAGOS_MODO !== 'demo') {
     throw new ErrorHttp(503, MSG.PAGO_SIMULADO_NO_HABILITADO);
   }
@@ -43,110 +38,38 @@ const procesarPagoPremium = asyncHandler(async (req, res) => {
   if (body !== undefined && (!body || typeof body !== 'object' || Array.isArray(body))) {
     throw new ErrorHttp(400, MSG.RESULTADO_PAGO_INVALIDO);
   }
-  const resultado = body && Object.prototype.hasOwnProperty.call(body, 'resultado')
-    ? body.resultado
-    : 'aprobado';
-  if (resultado !== 'aprobado' && resultado !== 'rechazado') {
+  const resultado = body?.resultado ?? 'aprobado';
+  if (!['aprobado', 'rechazado'].includes(resultado)) {
     throw new ErrorHttp(400, MSG.RESULTADO_PAGO_INVALIDO);
   }
 
   const pago = await transaccion(async (conn) => {
-    const [[usuario]] = await conn.query(
-      'SELECT id_usuario, tipo FROM usuarios WHERE id_usuario = ? LIMIT 1 FOR UPDATE',
+    const [[vendedor]] = await conn.query(
+      'SELECT id_vendedor FROM vendedor WHERE id_vendedor = ? FOR UPDATE',
       [req.usuario.id]
     );
-    if (!usuario) throw new ErrorHttp(404, 'La cuenta no existe');
-    if (usuario.tipo === C.TIPOS.ADMIN) {
-      throw new ErrorHttp(403, 'Las cuentas de administrador no pueden contratar una suscripción');
-    }
-
-    const ahora = new Date();
-    const codigoTransaccion = `DEMO-${usuario.id_usuario}-${ahora.getTime()}`;
-    let planUsuario;
-    let fechaCorteActual = null;
-    if (usuario.tipo === C.TIPOS.VENDEDOR) {
-      const [[fila]] = await conn.query(
-        'SELECT plan, fecha_corte FROM vendedor WHERE id_vendedor = ? FOR UPDATE',
-        [usuario.id_usuario]
-      );
-      planUsuario = fila?.plan;
-      fechaCorteActual = fila?.fecha_corte;
-    } else {
-      const [[fila]] = await conn.query(
-        'SELECT plan, fecha_corte FROM cliente WHERE id_cliente = ? FOR UPDATE',
-        [usuario.id_usuario]
-      );
-      planUsuario = fila?.plan;
-      fechaCorteActual = fila?.fecha_corte;
-    }
-    usuario.plan = planUsuario;
-
-    const tipo = S.esPremium(usuario) ? 'Renovacion' : 'Compra';
-    const estado = resultado === 'aprobado' ? 'Aprobado' : 'Rechazado';
-    const [insertado] = await conn.query(
-      `INSERT INTO suscripcion
-         (id_usuario, tipo, estado_pago, suscrs_monto, moneda, codigo_transaccion, fech_pago)
-       VALUES (?, ?, ?, ?, 'MXN', ?, ?)`,
-      [usuario.id_usuario, tipo, estado, C.PAGO_SIMULADO_MONTO, codigoTransaccion, ahora]
+    if (!vendedor) throw new ErrorHttp(403, 'Solo los vendedores pueden adquirir Premium');
+    const [[premium]] = await conn.query(
+      'SELECT id_vendedor FROM premium_vendedor WHERE id_vendedor = ? FOR UPDATE',
+      [req.usuario.id]
     );
+    if (premium) throw new ErrorHttp(409, 'El vendedor ya cuenta con Premium');
 
-    if (resultado === 'rechazado') {
-      return { idSuscripcion: insertado.insertId, estado };
-    }
-
-    let rol = C.componerRol(usuario.tipo, planUsuario);
-    let fechaCorte;
-    if (S.esGratuito(usuario)) {
-      fechaCorte = S.calcularFechaCorte(ahora);
-      rol = await S.activarPremium(conn, usuario, { fechaCorte, renovacion: false });
-    } else {
-      const hoy = F.fechaEnZona(ahora);
-      const fechaCorteTexto = fechaCorteActual instanceof Date
-        ? fechaCorteActual.toISOString().slice(0, 10)
-        : String(fechaCorteActual || '').slice(0, 10);
-      const base = fechaCorteTexto > hoy ? fechaCorteTexto : hoy;
-      fechaCorte = F.sumarDiasFecha(base, C.PREMIUM_DIAS);
-      if (usuario.tipo === C.TIPOS.VENDEDOR) {
-        await conn.query(
-          'UPDATE vendedor SET fecha_corte = ? WHERE id_vendedor = ?',
-          [fechaCorte, usuario.id_usuario]
-        );
-      } else {
-        await conn.query(
-          'UPDATE cliente SET fecha_corte = ? WHERE id_cliente = ?',
-          [fechaCorte, usuario.id_usuario]
-        );
-      }
-    }
-
-    return {
-      idSuscripcion: insertado.insertId,
-      codigoTransaccion,
-      estado,
-      rol,
-      fechaCorte,
-    };
+    const codigo = `DEMO-${req.usuario.id}-${crypto.randomBytes(12).toString('hex')}`;
+    const idEstado = resultado === 'aprobado' ? 1 : 2;
+    const [insertado] = await conn.query(
+      `INSERT INTO pago (id_vendedor, id_estado_pago, monto, moneda, codigo_transaccion)
+       VALUES (?, ?, ?, 'MXN', ?)`,
+      [req.usuario.id, idEstado, C.PRECIO_PREMIUM, codigo]
+    );
+    if (resultado === 'aprobado') await S.activarPremium(conn, req.usuario.id, insertado.insertId);
+    return { id_pago: insertado.insertId, codigo_transaccion: codigo };
   });
 
   if (resultado === 'rechazado') {
-    return res.json({
-      mensaje: MSG.PAGO_SIMULADO_RECHAZADO,
-      simulado: true,
-      estado: pago.estado,
-      referencia: pago.idSuscripcion,
-    });
+    return res.status(402).json({ es_premium: false, estado_pago: 'Rechazado' });
   }
-
-  res.status(201).json({
-    mensaje: MSG.PAGO_SIMULADO_APROBADO,
-    simulado: true,
-    estado: pago.estado,
-    referencia: pago.idSuscripcion,
-    codigo_transaccion: pago.codigoTransaccion,
-    rol: pago.rol,
-    plan: 'Premium',
-    fecha_corte: pago.fechaCorte,
-  });
+  res.status(201).json({ es_premium: true, id_pago: pago.id_pago });
 });
 
 module.exports = { obtenerSuscripcion, procesarPagoPremium };

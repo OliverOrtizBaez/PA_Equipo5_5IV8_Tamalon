@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const admin = require('../Controladores/adminController');
+const estadisticas = require('../Controladores/adminEstadisticasController');
 const { verificarSesion, verificarTipo } = require('../middlewares/autenticacion');
 const { TIPOS } = require('../config/constantes');
 
@@ -12,7 +13,8 @@ router.get('/trafico', admin.consultarTrafico);                           // RF2
 router.get('/ingresos', admin.consultarIngresos);                         // RF18
 router.get('/ingresos/exportar', admin.exportarIngresos);                 // RF19a / RF19b
 router.get('/usuarios', admin.buscarUsuarios);                            // RF21
-router.put('/usuarios/:id/rol', admin.cambiarRol);                        // RF17
+router.put('/usuarios/:id/premium', admin.cambiarPremium);
+router.get('/estadisticas', estadisticas.consultarEstadisticas);
 router.put('/usuarios/:id/suspender', admin.suspenderIndefinidamente);    // RF22.1
 router.put('/usuarios/:id/suspender-temporal', admin.suspenderTemporalmente); // RF22.2a
 router.put('/usuarios/:id/reactivar', admin.reactivarCuenta);             // RF22.3

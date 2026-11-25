@@ -19,12 +19,12 @@ const bd = {
 };
 function reiniciarBd() {
   bd.usuarios.clear(); bd.control.clear(); bd.sesiones.length = 0; bd.logins.length = 0; bd.sigId = 1;
-  const base = { contrasena: HASH, tipo: 'Cliente', plan: 'Gratuito', rol: 'Cliente Gratuito',
+  const base = { contrasena: HASH, rol: 'Cliente', es_premium: 0, id_tipo_vendedor: null,
     estado_cuenta: 'Activa', zona_horaria: 'America/Mexico_City', telefono: null, foto_perfil: null, fin_suspension: null };
-  bd.usuarios.set(1, { ...base, id_usuario: 1, nombre_completo: 'Ana', correo: 'ana@correo.com' });
-  bd.usuarios.set(2, { ...base, id_usuario: 2, nombre_completo: 'Beto', correo: 'beto@correo.com' });
-  bd.usuarios.set(3, { ...base, id_usuario: 3, nombre_completo: 'Admin', correo: 'admin@correo.com', tipo: 'Administrador', plan: null, rol: 'Administrador' });
-  bd.usuarios.set(4, { ...base, id_usuario: 4, nombre_completo: 'Susp', correo: 'susp@correo.com', estado_cuenta: 'Suspendida indefinidamente' });
+  bd.usuarios.set(1, { ...base, id_usuario: 1, nombre: 'Ana', apellidos: 'López', correo: 'ana@correo.com' });
+  bd.usuarios.set(2, { ...base, id_usuario: 2, nombre: 'Beto', apellidos: 'Pérez', correo: 'beto@correo.com' });
+  bd.usuarios.set(3, { ...base, id_usuario: 3, nombre: 'Admin', apellidos: 'Sistema', correo: 'admin@correo.com', rol: 'Administrador' });
+  bd.usuarios.set(4, { ...base, id_usuario: 4, nombre: 'Susp', apellidos: 'Cuenta', correo: 'susp@correo.com', estado_cuenta: 'Suspendida indefinidamente' });
 }
 const filaUsuario = (u) => ({ ...u });
 
@@ -45,24 +45,24 @@ const pool = {
       return [{ affectedRows: 1 }];
     }
     if (s.startsWith('UPDATE control_acceso SET intentos_fallidos = 0')) { bd.control.delete(p[0]); return [{ affectedRows: 1 }]; }
-    if (s.startsWith('UPDATE usuarios SET zona_horaria')) { bd.usuarios.get(p[1]).zona_horaria = p[0]; return [{ affectedRows: 1 }]; }
-    if (s.startsWith('UPDATE usuarios SET estado_cuenta')) return [{ affectedRows: 0 }];
+    if (s.startsWith('UPDATE usuario SET zona_horaria')) { bd.usuarios.get(p[1]).zona_horaria = p[0]; return [{ affectedRows: 1 }]; }
+    if (s.startsWith('UPDATE usuario SET')) return [{ affectedRows: 0 }];
     if (s.startsWith('INSERT INTO sesion')) {
       const fila = { id_sesion: bd.sigId++, id_usuario: p[0], token: p[1], fecha_expiracion: p[3] };
       bd.sesiones.push(fila);
       return [{ insertId: fila.id_sesion }];
     }
     if (s.startsWith('INSERT INTO registro_login')) { bd.logins.push(p[0]); return [{ affectedRows: 1 }]; }
-    if (s.includes('FROM sesion s JOIN vw_usuario u')) {
-      const ses = bd.sesiones.find((x) => x.token === p[0] && x.id_usuario === p[1]);
-      if (!ses) return [[]];
-      return [[{ ...filaUsuario(bd.usuarios.get(ses.id_usuario)), id_sesion: ses.id_sesion, fecha_expiracion: ses.fecha_expiracion }]];
-    }
-    if (s.includes('FROM sesion s JOIN usuarios u')) {
+    if (s.includes('SELECT s.token, s.fecha_expiracion, u.estado_cuenta')) {
       const hashes = p[0][0];
       return [bd.sesiones.filter((x) => hashes.includes(x.token)).map((x) => ({
         token: x.token, fecha_expiracion: x.fecha_expiracion, estado_cuenta: bd.usuarios.get(x.id_usuario).estado_cuenta,
       }))];
+    }
+    if (s.includes('FROM sesion s JOIN vw_usuario u')) {
+      const ses = bd.sesiones.find((x) => x.token === p[0] && x.id_usuario === p[1]);
+      if (!ses) return [[]];
+      return [[{ ...filaUsuario(bd.usuarios.get(ses.id_usuario)), id_sesion: ses.id_sesion, fecha_expiracion: ses.fecha_expiracion }]];
     }
     if (s.startsWith('DELETE FROM sesion WHERE id_sesion')) {
       const antes = bd.sesiones.length;
@@ -160,7 +160,8 @@ test('HTTP: el login devuelve un JWT en "token" y la forma de siempre (la app mo
   assert.equal(r.cuerpo.token.split('.').length, 3);
   assert.ok(r.cuerpo.expira);
   assert.equal(r.cuerpo.usuario.correo, 'ana@correo.com');
-  assert.equal(r.cuerpo.usuario.rol, 'Cliente Gratuito');
+  assert.equal(r.cuerpo.usuario.rol, 'Cliente');
+  assert.equal(r.cuerpo.usuario.es_premium, false);
   assert.equal(r.cuerpo.usuario.contrasena, undefined);
   assert.equal(bd.sesiones.length, 1);
   assert.equal(bd.sesiones[0].token, hashToken(JSON.parse(Buffer.from(r.cuerpo.token.split('.')[1], 'base64url')).jti)); // la BD guarda solo el hash del jti

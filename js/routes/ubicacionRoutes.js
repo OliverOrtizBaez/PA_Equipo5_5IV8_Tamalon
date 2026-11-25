@@ -5,10 +5,9 @@ const { TIPOS } = require('../config/constantes');
 
 const soloVendedores = verificarTipo(TIPOS.VENDEDOR);
 
-router.use(verificarSesion);
-
-router.put('/mia', soloVendedores, ubicacion.actualizarUbicacion);
-router.put('/mia/fuera-de-ruta', soloVendedores, ubicacion.fueraDeRuta);
+router.post('/jornada/iniciar', verificarSesion, soloVendedores, ubicacion.iniciarJornada);
+router.post('/jornada/finalizar', verificarSesion, soloVendedores, ubicacion.finalizarJornada);
+router.put('/mia', verificarSesion, soloVendedores, ubicacion.actualizarUbicacion);
 router.get('/cercanos', ubicacion.obtenerCercanos);
 router.get('/vendedores/:id', ubicacion.obtenerUbicacionVendedor);
 

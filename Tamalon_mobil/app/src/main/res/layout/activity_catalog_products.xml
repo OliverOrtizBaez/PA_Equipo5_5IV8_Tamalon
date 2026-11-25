@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Administración de productos dentro de un catálogo del vendedor (tabla producto en tamalon_db.sql). -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/tamalon_background"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="@dimen/screen_horizontal"
+        android:paddingTop="@dimen/screen_top"
+        android:paddingBottom="36dp">
+
+        <!-- Tarjeta de encabezado del catálogo seleccionado -->
+        <LinearLayout
+            style="@style/Tamalon.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="18dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/catalog_products_state_badge"
+                    style="@style/Tamalon.Caption"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_badge"
+                    android:paddingHorizontal="9dp"
+                    android:paddingVertical="4dp"
+                    android:text="Visible"
+                    android:textColor="@color/tamalon_field_text"
+                    android:textSize="8.5sp"
+                    android:textStyle="bold" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1" />
+
+                <TextView
+                    android:id="@+id/catalog_products_count_badge"
+                    style="@style/Tamalon.Caption"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0 productos"
+                    android:textColor="@color/tamalon_muted"
+                    android:textSize="9sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/catalog_products_title"
+                style="@style/Tamalon.SectionTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="Catálogo"
+                android:textColor="@color/tamalon_ink"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+
+            <!-- Botón principal: Agregar producto -->
+            <android.widget.Button
+                android:id="@+id/catalog_products_btn_add"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/bg_button"
+                android:backgroundTint="@null"
+                android:fontFamily="@font/inter"
+                android:text="+ Agregar producto"
+                android:textAllCaps="false"
+                android:textColor="@color/tamalon_ink"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <!-- Acciones secundarias del catálogo: Editar / Borrar catálogo -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:orientation="horizontal">
+
+                <android.widget.Button
+                    android:id="@+id/catalog_products_btn_edit_catalog"
+                    android:layout_width="0dp"
+                    android:layout_height="38dp"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_surface_card"
+                    android:backgroundTint="@null"
+                    android:fontFamily="@font/inter"
+                    android:text="Editar catálogo"
+                    android:textAllCaps="false"
+                    android:textColor="@color/tamalon_field_text"
+                    android:textSize="9.5sp" />
+
+                <android.widget.Button
+                    android:id="@+id/catalog_products_btn_delete_catalog"
+                    android:layout_width="0dp"
+                    android:layout_height="38dp"
+                    android:layout_marginStart="6dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_surface_card"
+                    android:backgroundTint="@null"
+                    android:fontFamily="@font/inter"
+                    android:text="Borrar catálogo"
+                    android:textAllCaps="false"
+                    android:textColor="@color/tamalon_error"
+                    android:textSize="9.5sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <TextView
+            style="@style/Tamalon.Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:layout_marginBottom="8dp"
+            android:text="PRODUCTOS GUARDADOS" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/catalog_products_recycler"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:nestedScrollingEnabled="false" />
+
+        <!-- Estado vacío amable cuando no hay productos en este catálogo -->
+        <LinearLayout
+            android:id="@+id/catalog_products_empty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_empty"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="28dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:contentDescription="Sin productos"
+                android:src="@drawable/ic_photo_placeholder" />
+
+            <TextView
+                style="@style/Tamalon.Body"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="Este catálogo aún no tiene productos"
+                android:textColor="@color/tamalon_ink"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                style="@style/Tamalon.Caption"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:gravity="center"
+                android:text="Agrega tus tamales, atoles o antojitos con foto, precio y categorías para que los clientes los vean."
+                android:textColor="@color/tamalon_muted"
+                android:textSize="9.5sp" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

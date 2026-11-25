@@ -1,0 +1,12 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="40dp"
+    android:height="40dp"
+    android:viewportWidth="40"
+    android:viewportHeight="40">
+    <path android:pathData="M20,35.5 m-7,0 a7,2.3 0,1 0,14 0 a7,2.3 0,1 0,-14 0" android:fillColor="@color/tamalon_ink" android:fillAlpha="0.22" />
+    <path android:pathData="M20,4 C26.6,4 32,9.3 32,15.8 C32,23.2 22.8,31.8 20,34.5 L20,4 Z" android:fillColor="@color/tamalon_premium_border" />
+    <path android:pathData="M20,4 C13.4,4 8,9.3 8,15.8 C8,23.2 17.2,31.8 20,34.5 L20,4 Z" android:fillColor="@color/tamalon_gold" />
+    <path android:pathData="M20,4 C13.4,4 8,9.3 8,15.8 C8,23.2 17.2,31.8 20,34.5 C22.8,31.8 32,23.2 32,15.8 C32,9.3 26.6,4 20,4 Z" android:fillColor="@android:color/transparent" android:strokeColor="@color/tamalon_surface_strong" android:strokeWidth="1.4" />
+    <path android:pathData="M20,15.5 m-7.6,0 a7.6,7.6 0,1 0,15.2 0 a7.6,7.6 0,1 0,-15.2 0" android:fillColor="@color/tamalon_surface" />
+    <path android:pathData="M16,15 L24,15 L20,11 Z" android:fillColor="@color/tamalon_field_text" />
+</vector>

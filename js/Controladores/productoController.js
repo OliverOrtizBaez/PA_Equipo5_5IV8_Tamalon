@@ -3,9 +3,6 @@ const C = require('../config/constantes');
 const { ErrorHttp, ErrorValidacion, asyncHandler } = require('../utils/errores');
 const { entero } = require('../utils/validaciones');
 
-const CATEGORIAS = ['Comida preparada', 'Bebidas', 'Postres y dulces', 'Frutas y verduras', 'Botanas y snacks', 'Otros'];
-const ESTADOS = ['Visible', 'Oculto'];
-
 function idValido(valor, etiqueta = 'Identificador') {
   const id = entero(valor);
   if (id === null) throw new ErrorHttp(400, `${etiqueta} no válido`);
@@ -53,17 +50,20 @@ function validarImagen(valor) {
 }
 
 function validarCategoria(valor) {
-  if (!CATEGORIAS.includes(valor)) {
-    throw new ErrorValidacion([`Dato inválido en Categoría: selecciona una de estas opciones: ${CATEGORIAS.join(', ')}`]);
-  }
-  return valor;
+  const id = entero(valor);
+  if (id === null) throw new ErrorValidacion(['Dato inválido en Categoría: id_categoria no válido']);
+  return id;
 }
 
 async function buscarProductoPropio(conn, id, idVendedor, lock = false) {
   const [filas] = await conn.query(
-    `SELECT p.id_producto, p.id_catalogo, p.nombre, p.descripcion, p.precio, p.imagen, p.estado, p.categoria
+    `SELECT p.id_producto, p.id_catalogo, p.id_categoria, cp.nombre AS categoria,
+            p.nombre, p.descripcion, p.precio, p.imagen, p.visible, p.fecha_creacion,
+            v.id_tipo_vendedor
        FROM producto p
        JOIN catalogo c ON c.id_catalogo = p.id_catalogo
+       JOIN vendedor v ON v.id_vendedor = c.id_vendedor
+       JOIN categoria_producto cp ON cp.id_categoria = p.id_categoria
       WHERE p.id_producto = ? AND c.id_vendedor = ?${lock ? ' FOR UPDATE' : ''}`,
     [id, idVendedor]
   );
@@ -71,27 +71,36 @@ async function buscarProductoPropio(conn, id, idVendedor, lock = false) {
   return filas[0];
 }
 
+async function productoCompleto(conn, id) {
+  const [[producto]] = await conn.query(
+    `SELECT p.id_producto, p.id_catalogo, p.id_categoria, cp.nombre AS categoria,
+            p.nombre, p.descripcion, p.precio, p.imagen, p.visible
+       FROM producto p JOIN categoria_producto cp ON cp.id_categoria = p.id_categoria
+      WHERE p.id_producto = ?`,
+    [id]
+  );
+  return producto;
+}
+
 const obtenerPorCatalogo = asyncHandler(async (req, res) => {
   const idCatalogo = idValido(req.params.catalogoId, 'Identificador de catálogo');
   const [[catalogo]] = await pool.query(
-    `SELECT c.id_catalogo, c.id_vendedor
-       FROM catalogo c
-       JOIN vendedor v ON v.id_vendedor = c.id_vendedor
-       JOIN usuarios u ON u.id_usuario = v.id_vendedor
-      WHERE c.id_catalogo = ? AND c.estado = 'Visible'
-        AND u.estado_cuenta = ?`,
-    [idCatalogo, C.ESTADOS_CUENTA.ACTIVA]
+    `SELECT c.id_catalogo
+       FROM catalogo c JOIN usuario u ON u.id_usuario = c.id_vendedor
+      WHERE c.id_catalogo = ? AND c.visible = 1 AND u.id_estado_cuenta = 1`,
+    [idCatalogo]
   );
   if (!catalogo) throw new ErrorHttp(404, 'No se encontró el catálogo');
 
   const [productos] = await pool.query(
-    `SELECT id_producto, id_catalogo, nombre, descripcion, precio, imagen, estado, categoria, fech_creacion
-       FROM producto
-      WHERE id_catalogo = ? AND estado = 'Visible'
-      ORDER BY fech_creacion ASC, id_producto ASC`,
+    `SELECT p.id_producto, p.id_catalogo, p.id_categoria, cp.nombre AS categoria,
+            p.nombre, p.descripcion, p.precio, p.imagen, p.visible
+       FROM producto p JOIN categoria_producto cp ON cp.id_categoria = p.id_categoria
+      WHERE p.id_catalogo = ? AND p.visible = 1
+      ORDER BY p.fecha_creacion, p.id_producto`,
     [idCatalogo]
   );
-  res.json({ productos });
+  res.json({ productos: productos.map((producto) => ({ ...producto, visible: Boolean(producto.visible) })) });
 });
 
 const crearProducto = asyncHandler(async (req, res) => {
@@ -100,52 +109,51 @@ const crearProducto = asyncHandler(async (req, res) => {
   const nombre = validarTexto(req.body?.nombre, 'Nombre', 2, 60);
   const descripcion = validarTexto(req.body?.descripcion, 'Descripción', 1, 300);
   const precio = validarPrecio(req.body?.precio);
-  const categoria = validarCategoria(req.body?.categoria);
+  const idCategoria = validarCategoria(req.body?.id_categoria);
   const imagen = validarImagen(req.body?.imagen ?? null);
 
-  const idProducto = await transaccion(async (conn) => {
+  const producto = await transaccion(async (conn) => {
     const [catalogos] = await conn.query(
-      `SELECT c.id_catalogo, c.estado
-         FROM catalogo c
+      `SELECT c.id_catalogo, c.visible, v.id_tipo_vendedor,
+              EXISTS (SELECT 1 FROM premium_vendedor pv WHERE pv.id_vendedor = v.id_vendedor) AS es_premium
+         FROM catalogo c JOIN vendedor v ON v.id_vendedor = c.id_vendedor
         WHERE c.id_catalogo = ? AND c.id_vendedor = ?
         FOR UPDATE`,
       [idCatalogo, req.usuario.id]
     );
-    if (!catalogos[0]) throw new ErrorHttp(404, 'No se encontró el catálogo de tu cuenta');
-    if (catalogos[0].estado !== 'Visible') throw new ErrorHttp(409, 'No puedes agregar productos a un catálogo oculto');
+    const catalogo = catalogos[0];
+    if (!catalogo) throw new ErrorHttp(404, 'No se encontró el catálogo de tu cuenta');
+    if (!catalogo.visible) throw new ErrorHttp(409, 'No puedes agregar productos a un catálogo oculto');
 
-    const [[vendedor]] = await conn.query(
-      'SELECT plan FROM vendedor WHERE id_vendedor = ? FOR UPDATE',
-      [req.usuario.id]
+    const [categorias] = await conn.query(
+      'SELECT id_categoria FROM categoria_producto WHERE id_categoria = ? AND id_tipo_vendedor = ?',
+      [idCategoria, catalogo.id_tipo_vendedor]
     );
-    if (!vendedor) {
-      throw new ErrorHttp(403, 'Solo las cuentas de vendedor pueden administrar productos');
-    }
+    if (!categorias[0]) throw new ErrorValidacion(['La categoría no pertenece al tipo de vendedor de tu cuenta']);
+
     const [[{ total }]] = await conn.query(
-      "SELECT COUNT(*) AS total FROM producto WHERE id_catalogo = ? AND estado = 'Visible'",
+      'SELECT COUNT(*) AS total FROM producto WHERE id_catalogo = ? AND visible = 1',
       [idCatalogo]
     );
-    const limite = vendedor.plan === C.PLANES.PREMIUM
-      ? C.LIMITE_PRODUCTOS_PREMIUM
-      : C.LIMITE_PRODUCTOS_GRATIS;
+    const limite = catalogo.es_premium ? C.LIMITE_PRODUCTOS_PREMIUM : C.LIMITE_PRODUCTOS_GRATIS;
     if (total >= limite) throw new ErrorHttp(409, `Tu plan permite hasta ${limite} productos visibles por catálogo`);
 
     const [insertado] = await conn.query(
-      `INSERT INTO producto (id_catalogo, nombre, descripcion, precio, imagen, estado, categoria)
-       VALUES (?, ?, ?, ?, ?, 'Visible', ?)`,
-      [idCatalogo, nombre, descripcion, precio, imagen, categoria]
+      `INSERT INTO producto (id_catalogo, id_categoria, nombre, descripcion, precio, imagen, visible)
+       VALUES (?, ?, ?, ?, ?, ?, 1)`,
+      [idCatalogo, idCategoria, nombre, descripcion, precio, imagen]
     );
-    return insertado.insertId;
+    const creado = await productoCompleto(conn, insertado.insertId);
+    return { ...creado, visible: Boolean(creado.visible) };
   });
-
-  res.status(201).json({ mensaje: 'Producto creado', id_producto: idProducto });
+  res.status(201).json(producto);
 });
 
 const actualizarProducto = asyncHandler(async (req, res) => {
   exigirVendedor(req);
   const id = idValido(req.params.id, 'Identificador de producto');
   const datos = req.body || {};
-  const campos = ['nombre', 'descripcion', 'precio', 'imagen', 'categoria', 'estado'];
+  const campos = ['nombre', 'descripcion', 'precio', 'imagen', 'id_categoria', 'visible'];
   const proporcionados = campos.filter((campo) => Object.hasOwn(datos, campo));
   if (!proporcionados.length) throw new ErrorHttp(400, 'Indica los datos que deseas actualizar');
 
@@ -154,36 +162,45 @@ const actualizarProducto = asyncHandler(async (req, res) => {
   if (Object.hasOwn(datos, 'descripcion')) actualizados.descripcion = validarTexto(datos.descripcion, 'Descripción', 1, 300);
   if (Object.hasOwn(datos, 'precio')) actualizados.precio = validarPrecio(datos.precio);
   if (Object.hasOwn(datos, 'imagen')) actualizados.imagen = validarImagen(datos.imagen);
-  if (Object.hasOwn(datos, 'categoria')) actualizados.categoria = validarCategoria(datos.categoria);
-  if (Object.hasOwn(datos, 'estado')) {
-    if (!ESTADOS.includes(datos.estado)) throw new ErrorValidacion(['Dato inválido en Estado: Visible u Oculto']);
-    actualizados.estado = datos.estado;
+  if (Object.hasOwn(datos, 'id_categoria')) actualizados.id_categoria = validarCategoria(datos.id_categoria);
+  if (Object.hasOwn(datos, 'visible')) {
+    if (typeof datos.visible !== 'boolean') throw new ErrorValidacion(['Dato inválido en Visible: debe ser booleano']);
+    actualizados.visible = datos.visible ? 1 : 0;
   }
 
-  await transaccion(async (conn) => {
-    const producto = await buscarProductoPropio(conn, id, req.usuario.id, true);
-    if (actualizados.estado === 'Visible' && producto.estado !== 'Visible') {
+  const producto = await transaccion(async (conn) => {
+    const actual = await buscarProductoPropio(conn, id, req.usuario.id, true);
+    if (actualizados.id_categoria !== undefined) {
+      const [categorias] = await conn.query(
+        'SELECT id_categoria FROM categoria_producto WHERE id_categoria = ? AND id_tipo_vendedor = ?',
+        [actualizados.id_categoria, actual.id_tipo_vendedor]
+      );
+      if (!categorias[0]) throw new ErrorValidacion(['La categoría no pertenece al tipo de vendedor de tu cuenta']);
+    }
+
+    if (actualizados.visible === 1 && !actual.visible) {
       const [[vendedor]] = await conn.query(
-        'SELECT plan FROM vendedor WHERE id_vendedor = ? FOR UPDATE',
-        [req.usuario.id]
+        `SELECT EXISTS (SELECT 1 FROM premium_vendedor WHERE id_vendedor = ?) AS es_premium
+           FROM vendedor WHERE id_vendedor = ? FOR UPDATE`,
+        [req.usuario.id, req.usuario.id]
       );
       const [[{ total }]] = await conn.query(
-        "SELECT COUNT(*) AS total FROM producto WHERE id_catalogo = ? AND estado = 'Visible'",
-        [producto.id_catalogo]
+        'SELECT COUNT(*) AS total FROM producto WHERE id_catalogo = ? AND visible = 1',
+        [actual.id_catalogo]
       );
-      const limite = vendedor.plan === C.PLANES.PREMIUM
-        ? C.LIMITE_PRODUCTOS_PREMIUM
-        : C.LIMITE_PRODUCTOS_GRATIS;
+      const limite = vendedor.es_premium ? C.LIMITE_PRODUCTOS_PREMIUM : C.LIMITE_PRODUCTOS_GRATIS;
       if (total >= limite) throw new ErrorHttp(409, `Tu plan permite hasta ${limite} productos visibles por catálogo`);
     }
 
-    const asignaciones = proporcionados.map((campo) => `${campo} = ?`).join(', ');
+    const assignments = proporcionados.map((campo) => `${campo} = ?`).join(', ');
     await conn.query(
-      `UPDATE producto SET ${asignaciones} WHERE id_producto = ?`,
+      `UPDATE producto SET ${assignments} WHERE id_producto = ?`,
       [...proporcionados.map((campo) => actualizados[campo]), id]
     );
+    const actualizado = await productoCompleto(conn, id);
+    return { ...actualizado, visible: Boolean(actualizado.visible) };
   });
-  res.json({ mensaje: 'Producto actualizado' });
+  res.json(producto);
 });
 
 const eliminarProducto = asyncHandler(async (req, res) => {
@@ -193,7 +210,7 @@ const eliminarProducto = asyncHandler(async (req, res) => {
     await buscarProductoPropio(conn, id, req.usuario.id, true);
     await conn.query('DELETE FROM producto WHERE id_producto = ?', [id]);
   });
-  res.json({ mensaje: 'Producto eliminado' });
+  res.status(204).end();
 });
 
 module.exports = { obtenerPorCatalogo, crearProducto, actualizarProducto, eliminarProducto };

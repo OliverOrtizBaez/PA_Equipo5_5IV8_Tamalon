@@ -145,6 +145,7 @@
         .msg-error { color: var(--danger); margin: 8px 0; min-height: 1em; }
         .msg-info { color: var(--mid); margin: 8px 0; }
         .acciones { display: flex; flex-wrap: wrap; gap: 6px; }
+        button.card { border: 0; font: inherit; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -154,7 +155,8 @@
         <nav>
             <button class="nav-btn active" onclick="cambiarSeccion('suscripciones', this); cargarSuscripciones();">Suscripciones y Tráfico</button>
             <button class="nav-btn" onclick="cambiarSeccion('ingresos', this)">Ingresos</button>
-            <button class="nav-btn" onclick="cambiarSeccion('usuarios', this)">Usuarios</button>
+            <button class="nav-btn" onclick="cambiarSeccion('usuarios', this); buscarUsuarios(1, true);">Usuarios</button>
+            <button class="nav-btn" onclick="cambiarSeccion('estadisticas', this); cargarEstadisticas();">Estadísticas</button>
             <button class="nav-btn" onclick="cambiarSeccion('reportes', this); cargarReportes();">Reportes</button>
             <button class="nav-btn" onclick="cambiarSeccion('contactos', this); cargarMensajesContacto();">Mensajes de contacto</button>
             <button class="nav-btn" onclick="cambiarSeccion('nuevo-admin', this)">Nuevo Administrador</button>
@@ -164,19 +166,15 @@
 
     <main>
         <section id="suscripciones" class="seccion activa">
-            <h1>Suscripciones Actuales</h1>
+            <h1>Premium vitalicio</h1>
             <div class="cards-container">
                 <div class="card">
                     <h3>Vendedores Premium</h3>
                     <p id="total-vendedores">0</p>
                 </div>
                 <div class="card">
-                    <h3>Clientes Premium</h3>
-                    <p id="total-clientes">0</p>
-                </div>
-                <div class="card" style="border-bottom: 4px solid var(--success);">
-                    <h3>Total Suscripciones</h3>
-                    <p id="total-suscripciones">0</p>
+                    <h3>Pago único</h3>
+                    <p>$50 MXN</p>
                 </div>
             </div>
 
@@ -228,7 +226,21 @@
             <h1>Gestión de Usuarios</h1>
             <div class="filtros">
                 <input type="text" id="input-busqueda-usuarios" placeholder="Buscar por nombre o correo..." style="flex:1;">
-                <button class="btn" onclick="buscarUsuarios()">Buscar</button>
+                <select id="filtro-rol">
+                    <option value="">Todos los roles</option>
+                    <option value="Administrador">Administrador</option>
+                    <option value="Vendedor">Vendedor</option>
+                    <option value="Cliente">Cliente</option>
+                </select>
+                <select id="filtro-premium">
+                    <option value="">Premium: cualquiera</option>
+                    <option value="true">Premium</option>
+                    <option value="false">Sin Premium</option>
+                </select>
+                <select id="filtro-tipo-vendedor">
+                    <option value="">Todos los tipos</option>
+                </select>
+                <button class="btn" onclick="buscarUsuarios(1, true)">Filtrar</button>
             </div>
             <table>
                 <thead>
@@ -237,15 +249,39 @@
                         <th>Nombre</th>
                         <th>Correo</th>
                         <th>Rol</th>
+                        <th>Tipo de vendedor</th>
+                        <th>Premium</th>
                         <th>Estado</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody id="tbody-usuarios">
-                    <tr><td colspan="6" style="text-align:center;">Ingrese un término de búsqueda.</td></tr>
+                    <tr><td colspan="8" style="text-align:center;">Cargando usuarios...</td></tr>
                 </tbody>
             </table>
             <div id="paginacion-usuarios" class="paginacion"></div>
+        </section>
+
+        <section id="estadisticas" class="seccion">
+            <h1>Estadísticas</h1>
+            <div class="cards-container">
+                <button class="card" onclick="abrirUsuarios('Vendedor')"><h3>Vendedores</h3><p id="stat-vendedores">0</p></button>
+                <button class="card" onclick="abrirUsuarios('Vendedor', 'true')"><h3>Vendedores Premium</h3><p id="stat-premium">0</p></button>
+                <div class="card"><h3>Conversión Premium</h3><p id="stat-conversion">0%</p></div>
+                <div class="card"><h3>Ingresos acumulados</h3><p id="stat-ingresos">$0.00</p></div>
+                <div class="card"><h3>En ruta ahora</h3><p id="stat-en-ruta">0</p></div>
+            </div>
+            <div class="cards-container">
+                <div class="card"><h3>Vendedores sin catálogo</h3><p id="stat-sin-catalogo">0</p></div>
+                <div class="card"><h3>Cuentas suspendidas</h3><p id="stat-suspendidas">0</p></div>
+                <div class="card"><h3>Reportes últimos 30 días</h3><p id="stat-reportes">0</p></div>
+            </div>
+            <div class="cards-container">
+                <div class="card"><h3>Usuarios por rol</h3><canvas id="grafico-roles"></canvas></div>
+                <div class="card"><h3>Vendedores por tipo</h3><canvas id="grafico-tipos"></canvas></div>
+                <div class="card"><h3>Ingresos por mes</h3><canvas id="grafico-ingresos"></canvas></div>
+            </div>
+            <p id="msg-estadisticas" class="msg-error"></p>
         </section>
 
         <section id="reportes" class="seccion">
@@ -290,8 +326,12 @@
             <div style="background: var(--white); padding: 30px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
                 <form id="form-admin" onsubmit="crearAdministrador(event)">
                     <div class="form-group">
-                        <label>Nombre Completo</label>
+                        <label>Nombre</label>
                         <input type="text" id="admin-nombre" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Apellidos</label>
+                        <input type="text" id="admin-apellidos" required>
                     </div>
                     <div class="form-group">
                         <label>Correo Electrónico</label>
@@ -386,8 +426,6 @@
             try {
                 const data = await api('/suscripciones');
                 document.getElementById('total-vendedores').innerText = data.vendedoresPremium || 0;
-                document.getElementById('total-clientes').innerText = data.clientesPremium || 0;
-                document.getElementById('total-suscripciones').innerText = data.totalSuscripciones || 0;
                 aviso.innerText = '';
             } catch (error) {
                 // Conserva los ultimos valores mostrados
@@ -449,10 +487,10 @@
                 if (data.pagos && data.pagos.length > 0) {
                     tbody.innerHTML = data.pagos.map(pago => `
                         <tr>
-                            <td>${esc(fechaHora(pago.fech_pago))}</td>
+                            <td>${esc(fechaHora(pago.fecha_pago))}</td>
                             <td>${esc(pago.id_usuario)}</td>
                             <td>${esc(pago.correo)}</td>
-                            <td>$ ${parseFloat(pago.suscrs_monto).toFixed(2)}</td>
+                            <td>$ ${parseFloat(pago.monto).toFixed(2)}</td>
                         </tr>`).join('');
                 } else {
                     tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No hay pagos en este rango.</td></tr>';
@@ -479,16 +517,26 @@
             } catch (error) { avisar(error); }
         }
 
-        // RF21.1 / RF21.2 - Buscar usuarios (20 por pagina)
-        let ultimaBusqueda = '';
+        // Usuarios: por defecto se lista la colección completa; los filtros son opcionales.
+        let filtrosUsuarios = {};
         let paginaUsuarios = 1;
         async function buscarUsuarios(pagina = 1, nuevaBusqueda = true) {
-            if (nuevaBusqueda) ultimaBusqueda = document.getElementById('input-busqueda-usuarios').value.trim();
-            if (!ultimaBusqueda) return;
+            if (nuevaBusqueda) {
+                filtrosUsuarios = {
+                    buscar: document.getElementById('input-busqueda-usuarios').value.trim(),
+                    rol: document.getElementById('filtro-rol').value,
+                    es_premium: document.getElementById('filtro-premium').value,
+                    id_tipo_vendedor: document.getElementById('filtro-tipo-vendedor').value
+                };
+            }
             paginaUsuarios = pagina;
 
             try {
-                const data = await api(`/usuarios?buscar=${encodeURIComponent(ultimaBusqueda)}&pagina=${pagina}`);
+                const params = new URLSearchParams({ pagina: String(pagina) });
+                Object.entries(filtrosUsuarios).forEach(([clave, valor]) => {
+                    if (valor) params.set(clave, valor);
+                });
+                const data = await api(`/usuarios?${params}`);
                 const tbody = document.getElementById('tbody-usuarios');
 
                 if (data.usuarios.length > 0) {
@@ -496,10 +544,10 @@
                         const id = Number(user.id_usuario);
                         const activa = user.estado_cuenta === 'Activa';
                         const esAdmin = user.rol === 'Administrador';
+                        const esVendedor = user.rol === 'Vendedor';
                         const acciones = esAdmin ? '—' : `
                             <div class="acciones">
-                                ${user.rol.endsWith('Gratuito') ? `<button class="btn btn-success" onclick="actualizarRol(${id}, 'Premium')" style="padding: 5px 10px; font-size:12px;">Hacer Premium</button>` : ''}
-                                ${user.rol.endsWith('Premium') ? `<button class="btn btn-secondary" onclick="actualizarRol(${id}, 'Gratuito')" style="padding: 5px 10px; font-size:12px;">Degradar</button>` : ''}
+                                ${esVendedor ? `<button class="btn ${user.es_premium ? 'btn-secondary' : 'btn-success'}" onclick="actualizarPremium(${id}, ${!user.es_premium})" style="padding: 5px 10px; font-size:12px;">${user.es_premium ? 'Quitar Premium' : 'Otorgar Premium'}</button>` : ''}
                                 ${activa ? `<button class="btn btn-secondary" onclick="suspenderTemporal(${id})" style="padding: 5px 10px; font-size:12px;">Suspender (días)</button>` : ''}
                                 ${user.estado_cuenta !== 'Suspendida indefinidamente' ? `<button class="btn btn-danger" onclick="suspenderUsuario(${id})" style="padding: 5px 10px; font-size:12px;">Suspender indef.</button>` : ''}
                                 ${!activa ? `<button class="btn btn-success" onclick="reactivarUsuario(${id})" style="padding: 5px 10px; font-size:12px;">Reactivar</button>` : ''}
@@ -510,12 +558,14 @@
                                 <td>${esc(user.nombre_completo)}</td>
                                 <td>${esc(user.correo)}</td>
                                 <td>${esc(user.rol)}</td>
+                                <td>${esc(user.tipo_vendedor || '—')}</td>
+                                <td>${esVendedor && user.es_premium ? 'Sí' : 'No'}</td>
                                 <td><span style="color:${activa ? 'var(--success)' : 'var(--danger)'}">${esc(user.estado_cuenta)}</span></td>
                                 <td>${acciones}</td>
                             </tr>`;
                     }).join('');
                 } else {
-                    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">${esc(data.mensaje || 'No se encontraron usuarios')}</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;">${esc(data.mensaje || 'No se encontraron usuarios')}</td></tr>`;
                 }
                 dibujarPaginacion('paginacion-usuarios', data.pagina, data.totalPaginas, 'irPaginaUsuarios');
             } catch (error) { avisar(error); }
@@ -531,10 +581,65 @@
             } catch (error) { avisar(error); }
         }
 
-        // RF17a / RF17c - Promover o degradar manualmente
-        function actualizarRol(idUsuario, accion) {
-            if (!confirm(`¿Seguro que deseas cambiar el rol de este usuario a ${accion}?`)) return;
-            accionUsuario(`/usuarios/${idUsuario}/rol`, 'PUT', { accion }, 'Rol actualizado correctamente');
+        function actualizarPremium(idUsuario, otorgar) {
+            const accion = otorgar ? 'otorgar' : 'quitar';
+            if (!confirm(`¿Seguro que deseas ${accion} Premium a este vendedor?`)) return;
+            accionUsuario(`/usuarios/${idUsuario}/premium`, 'PUT', { otorgar }, `Premium ${otorgar ? 'otorgado' : 'quitado'} correctamente`);
+        }
+
+        function abrirUsuarios(rol = '', esPremium = '') {
+            document.getElementById('filtro-rol').value = rol;
+            document.getElementById('filtro-premium').value = esPremium;
+            document.getElementById('filtro-tipo-vendedor').value = '';
+            cambiarSeccion('usuarios', document.querySelectorAll('.nav-btn')[2]);
+            buscarUsuarios(1, true);
+        }
+
+        async function cargarTiposVendedor() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/tipos-vendedor`);
+                if (!resp.ok) throw new Error('No se pudieron cargar los tipos de vendedor');
+                const { tipos } = await resp.json();
+                const select = document.getElementById('filtro-tipo-vendedor');
+                select.innerHTML = '<option value="">Todos los tipos</option>' +
+                    tipos.map((tipo) => `<option value="${Number(tipo.id_tipo_vendedor)}">${esc(tipo.nombre)}</option>`).join('');
+            } catch (error) {
+                document.getElementById('msg-estadisticas').innerText = error.message;
+            }
+        }
+
+        const graficosEstadisticas = {};
+        function crearGrafico(id, tipo, labels, valores, etiqueta) {
+            const canvas = document.getElementById(id);
+            if (graficosEstadisticas[id]) graficosEstadisticas[id].destroy();
+            graficosEstadisticas[id] = new Chart(canvas, {
+                type: tipo,
+                data: {
+                    labels,
+                    datasets: [{ label: etiqueta, data: valores, backgroundColor: '#6B4E35', borderColor: '#78905A', borderWidth: 1 }]
+                },
+                options: { responsive: true, scales: { y: { beginAtZero: true } } }
+            });
+        }
+
+        async function cargarEstadisticas() {
+            try {
+                const data = await api('/estadisticas');
+                document.getElementById('msg-estadisticas').innerText = '';
+                document.getElementById('stat-vendedores').innerText = data.embudo.vendedores;
+                document.getElementById('stat-premium').innerText = data.embudo.premium;
+                document.getElementById('stat-conversion').innerText = `${data.embudo.conversion}%`;
+                document.getElementById('stat-ingresos').innerText = `$${Number(data.ingresos.total).toFixed(2)} MXN`;
+                document.getElementById('stat-en-ruta').innerText = data.en_ruta_ahora;
+                document.getElementById('stat-sin-catalogo').innerText = data.calidad.vendedores_sin_catalogo;
+                document.getElementById('stat-suspendidas').innerText = data.calidad.suspendidas;
+                document.getElementById('stat-reportes').innerText = data.calidad.reportes_30d;
+                crearGrafico('grafico-roles', 'bar', data.por_rol.map((x) => x.rol), data.por_rol.map((x) => Number(x.total)), 'Usuarios');
+                crearGrafico('grafico-tipos', 'bar', data.por_tipo_vendedor.map((x) => x.nombre), data.por_tipo_vendedor.map((x) => Number(x.total)), 'Vendedores');
+                crearGrafico('grafico-ingresos', 'bar', data.ingresos.por_mes.map((x) => x.mes), data.ingresos.por_mes.map((x) => Number(x.monto)), 'MXN');
+            } catch (error) {
+                if (!error.silencioso) document.getElementById('msg-estadisticas').innerText = error.message;
+            }
         }
 
         // RF22.1 - Suspender indefinidamente
@@ -576,7 +681,7 @@
                                 <td>${esc(rep.tipo_emisor)}</td>
                                 <td>${esc(rep.id_emisor)}</td>
                                 <td>${esc(rep.id_reportado)}</td>
-                                <td>${esc(fechaHora(rep.fech_hrs, false))}</td>
+                                <td>${esc(fechaHora(rep.fecha, false))}</td>
                                 <td>
                                     <span data-completo="${esc(rep.motivo)}" data-corto="${esc(corto)}">${esc(corto)}</span>
                                     ${largo ? '<a href="#" onclick="alternarMotivo(this); return false;">… Ver más</a>' : ''}
@@ -630,6 +735,7 @@
             event.preventDefault();
 
             const nombre = document.getElementById('admin-nombre').value;
+            const apellidos = document.getElementById('admin-apellidos').value;
             const correo = document.getElementById('admin-correo').value;
             const pass = document.getElementById('admin-pass').value;
             const passConfirm = document.getElementById('admin-pass-confirm').value;
@@ -639,7 +745,7 @@
             try {
                 await api('/nuevo', {
                     metodo: 'POST',
-                    cuerpo: { nombre_completo: nombre, correo, contrasena: pass, confirmar_contrasena: passConfirm }
+                    cuerpo: { nombre, apellidos, correo, contrasena: pass, confirmar_contrasena: passConfirm }
                 });
                 alert('Cuenta de administrador creada exitosamente');
                 document.getElementById('form-admin').reset();
@@ -677,6 +783,7 @@
             document.getElementById('fecha-trafico').value = new Date().toLocaleDateString('en-CA'); // AAAA-MM-DD local
             cargarSuscripciones();
             cargarGraficoTrafico();
+            cargarTiposVendedor();
             iniciarCanalSesion();
         };
     </script>

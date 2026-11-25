@@ -15,48 +15,41 @@ const parseId = (valor) => {
   return id;
 };
 
-const parsePagina = (valor) => entero(valor ?? '1') || 1;
+const parsePagina = (valor) => {
+  const pagina = entero(valor ?? '1');
+  if (pagina === null || pagina < 1) throw new ErrorValidacion(['Dato inválido en Página']);
+  return pagina;
+};
 
 const crearAdministrador = asyncHandler(async (req, res) => {
   const cuenta = await crearCuenta(req.body, C.TIPOS.ADMIN);
   res.status(201).json({ mensaje: 'Cuenta de administrador creada', usuario: cuenta });
 });
 
-const consultarSuscripciones = asyncHandler(async (req, res) => {
-  const [[vendedores]] = await pool.query(
-    "SELECT COUNT(*) AS total FROM vendedor WHERE plan = 'Premium'"
-  );
-  const [[clientes]] = await pool.query(
-    "SELECT COUNT(*) AS total FROM cliente WHERE plan = 'Premium'"
-  );
-  const vendedoresPremium = Number(vendedores.total || 0);
-  const clientesPremium = Number(clientes.total || 0);
-  res.json({ vendedoresPremium, clientesPremium, totalSuscripciones: vendedoresPremium + clientesPremium });
+const consultarSuscripciones = asyncHandler(async (_req, res) => {
+  const [[fila]] = await pool.query('SELECT COUNT(*) AS total FROM premium_vendedor');
+  const vendedoresPremium = Number(fila.total || 0);
+  res.json({ vendedoresPremium, clientesPremium: 0, totalSuscripciones: vendedoresPremium });
 });
 
 const consultarTrafico = asyncHandler(async (req, res) => {
   const { fecha } = req.query;
   const errores = validar([{ campo: 'fecha', valor: fecha }]);
   if (errores.length) throw new ErrorValidacion(errores);
-
-  const tz = req.usuario.zonaHoraria; 
+  const tz = req.usuario.zonaHoraria;
   const base = new Date(`${fecha}T00:00:00Z`);
   const [filas] = await pool.query(
-    'SELECT fech_hrs FROM registro_login WHERE fech_hrs >= ? AND fech_hrs < ?',
+    'SELECT fecha FROM registro_login WHERE fecha >= ? AND fecha < ?',
     [F.sumarDias(base, -1), F.sumarDias(base, 2)]
   );
-
   const traficoHorario = Array(24).fill(0);
-  let total = 0;
-  for (const { fech_hrs } of filas) {
-    const d = new Date(fech_hrs);
-    if (F.fechaEnZona(d, tz) === fecha) {
-      traficoHorario[F.horaEnZona(d, tz)] += 1;
-      total += 1;
-    }
+  for (const { fecha: fechaLogin } of filas) {
+    const d = new Date(fechaLogin);
+    if (F.fechaEnZona(d, tz) === fecha) traficoHorario[F.horaEnZona(d, tz)] += 1;
   }
+  const total = traficoHorario.reduce((sum, n) => sum + n, 0);
   res.json(total === 0
-    ? { traficoHorario, sinDatos: true, mensaje: MSG.SIN_TRAFICO }  
+    ? { traficoHorario, sinDatos: true, mensaje: MSG.SIN_TRAFICO }
     : { traficoHorario, sinDatos: false });
 });
 
@@ -67,16 +60,17 @@ function leerRango(query) {
     ...validar([{ campo: 'fecha', valor: fin, etiqueta: 'Fecha final' }]),
   ];
   if (errores.length) throw new ErrorValidacion(errores);
-  if (inicio > fin) throw new ErrorHttp(400, MSG.RANGO_FECHAS_INVALIDO); 
+  if (inicio > fin) throw new ErrorHttp(400, MSG.RANGO_FECHAS_INVALIDO);
   return { inicio, fin, desde: F.inicioDiaZHN(inicio), hasta: F.finDiaZHN(fin) };
 }
 
 async function pagosAprobados(desde, hasta) {
   const [pagos] = await pool.query(
-    `SELECT s.fech_pago, s.id_usuario, u.correo, s.suscrs_monto, s.codigo_transaccion
-       FROM suscripcion s JOIN usuarios u ON u.id_usuario = s.id_usuario
-      WHERE s.estado_pago = 'Aprobado' AND s.moneda = 'MXN' AND s.fech_pago BETWEEN ? AND ?
-      ORDER BY s.fech_pago ASC, s.id_suscripcion ASC`,
+    `SELECT p.fecha_pago, p.id_vendedor AS id_usuario, u.correo, p.monto, p.codigo_transaccion
+       FROM pago p JOIN estado_pago ep ON ep.id_estado_pago = p.id_estado_pago
+       JOIN usuario u ON u.id_usuario = p.id_vendedor
+      WHERE ep.nombre = 'Aprobado' AND p.moneda = 'MXN' AND p.fecha_pago BETWEEN ? AND ?
+      ORDER BY p.fecha_pago, p.id_pago`,
     [desde, hasta]
   );
   return pagos;
@@ -85,70 +79,50 @@ async function pagosAprobados(desde, hasta) {
 const consultarIngresos = asyncHandler(async (req, res) => {
   const { desde, hasta } = leerRango(req.query);
   const [[{ total }]] = await pool.query(
-    `SELECT CAST(COALESCE(SUM(suscrs_monto), 0) AS DECIMAL(14,2)) AS total
-       FROM suscripcion WHERE estado_pago = 'Aprobado' AND moneda = 'MXN' AND fech_pago BETWEEN ? AND ?`,
+    `SELECT CAST(COALESCE(SUM(p.monto), 0) AS DECIMAL(14,2)) AS total
+       FROM pago p JOIN estado_pago ep ON ep.id_estado_pago = p.id_estado_pago
+      WHERE ep.nombre = 'Aprobado' AND p.moneda = 'MXN' AND p.fecha_pago BETWEEN ? AND ?`,
     [desde, hasta]
   );
   const pagos = await pagosAprobados(desde, hasta);
-  res.json({ totalIngresos: String(total), pagos }); 
+  res.json({ totalIngresos: String(total), pagos });
 });
 
 const celdaCsv = (valor) => {
   let texto = String(valor);
-  if (/^[=+\-@\t\r]/.test(texto)) texto = `'${texto}`; 
+  if (/^[=+\-@\t\r]/.test(texto)) texto = `'${texto}`;
   return /[",\r\n]/.test(texto) ? `"${texto.replace(/"/g, '""')}"` : texto;
 };
 
 function generarCsv(pagos) {
-  const lineas = [['fecha', 'ID de cuenta', 'correo de la cuenta', 'monto', 'codigo_transaccion'].join(',')];
-  for (const p of pagos) {
-    lineas.push([
-      celdaCsv(F.formatoFechaHora(new Date(p.fech_pago), C.ZONA_NEGOCIO)),
-      celdaCsv(p.id_usuario),
-      celdaCsv(p.correo),
-      celdaCsv(Number(p.suscrs_monto).toFixed(2)),
-      celdaCsv(p.codigo_transaccion || ''),
+  const filas = [['fecha', 'ID de vendedor', 'correo', 'monto', 'codigo_transaccion'].join(',')];
+  for (const pago of pagos) {
+    filas.push([
+      celdaCsv(F.formatoFechaHora(new Date(pago.fecha_pago), C.ZONA_NEGOCIO)),
+      celdaCsv(pago.id_usuario),
+      celdaCsv(pago.correo),
+      celdaCsv(Number(pago.monto).toFixed(2)),
+      celdaCsv(pago.codigo_transaccion || ''),
     ].join(','));
   }
-  return `${lineas.join('\r\n')}\r\n`;
+  return `${filas.join('\r\n')}\r\n`;
 }
 
 function generarPdf({ inicio, fin, pagos }) {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 40 });
     const partes = [];
-    doc.on('data', (d) => partes.push(d));
+    doc.on('data', (data) => partes.push(data));
     doc.on('end', () => resolve(Buffer.concat(partes)));
     doc.on('error', reject);
-
-    const X = { fecha: 40, id: 170, correo: 230, monto: 470 };
-    const encabezado = () => {
-      const y = doc.y;
-      doc.font('Helvetica-Bold').fontSize(9);
-      doc.text('Fecha', X.fecha, y, { width: 125, lineBreak: false });
-      doc.text('ID de cuenta', X.id, y, { width: 55, lineBreak: false });
-      doc.text('Correo de la cuenta', X.correo, y, { width: 235, lineBreak: false });
-      doc.text('Monto (MXN)', X.monto, y, { width: 85, align: 'right', lineBreak: false });
-      doc.moveTo(40, y + 13).lineTo(555, y + 13).stroke();
-      doc.text('Referencia / código de transacción', 40, y + 17, { width: 515, lineBreak: false });
-      doc.y = y + 31;
-      doc.font('Helvetica').fontSize(9);
-    };
-
     doc.font('Helvetica-Bold').fontSize(16).text('Reporte de ingresos - Tamalon');
-    doc.font('Helvetica').fontSize(10)
-      .text(`Rango (ZH-N): ${inicio} a ${fin}   |   Pagos aprobados: ${pagos.length}`).moveDown(1);
-    encabezado();
-
-    for (const p of pagos) {
-      if (doc.y > 750) { doc.addPage(); encabezado(); }
-      const y = doc.y;
-      doc.text(F.formatoFechaHora(new Date(p.fech_pago), C.ZONA_NEGOCIO), X.fecha, y, { width: 125, lineBreak: false });
-      doc.text(String(p.id_usuario), X.id, y, { width: 55, lineBreak: false });
-      doc.text(p.correo, X.correo, y, { width: 235, lineBreak: false, ellipsis: true });
-      doc.text(Number(p.suscrs_monto).toFixed(2), X.monto, y, { width: 85, align: 'right', lineBreak: false });
-      doc.text(p.codigo_transaccion || '-', 40, y + 12, { width: 515, lineBreak: false });
-      doc.y = y + 25;
+    doc.font('Helvetica').fontSize(10).text(`Rango: ${inicio} a ${fin} | Pagos aprobados: ${pagos.length}`).moveDown();
+    for (const pago of pagos) {
+      if (doc.y > 750) doc.addPage();
+      doc.fontSize(9).text(
+        `${F.formatoFechaHora(new Date(pago.fecha_pago), C.ZONA_NEGOCIO)} | ${pago.id_usuario} | ${pago.correo} | $${Number(pago.monto).toFixed(2)} MXN | ${pago.codigo_transaccion || '-'}`,
+        { width: 515 }
+      );
     }
     doc.end();
   });
@@ -156,13 +130,12 @@ function generarPdf({ inicio, fin, pagos }) {
 
 const exportarIngresos = asyncHandler(async (req, res) => {
   const { formato } = req.query;
-  if (formato !== 'csv' && formato !== 'pdf') {
+  if (!['csv', 'pdf'].includes(formato)) {
     throw new ErrorValidacion(['Dato inválido en Formato: csv o pdf']);
   }
   const { inicio, fin, desde, hasta } = leerRango(req.query);
   const pagos = await pagosAprobados(desde, hasta);
   const nombre = `ingresos_${inicio}_a_${fin}`;
-
   if (formato === 'csv') {
     res.set({
       'Content-Type': 'text/csv; charset=utf-8',
@@ -178,120 +151,148 @@ const exportarIngresos = asyncHandler(async (req, res) => {
   res.send(pdf);
 });
 
-const NOMBRE_ESTADO = (e) => e; 
-
-const buscarUsuarios = asyncHandler(async (req, res) => {
-  const { buscar } = req.query;
-  const errores = validar([{ campo: 'busqueda', valor: buscar }]);
-  if (errores.length) throw new ErrorValidacion(errores);
-
-  const pagina = parsePagina(req.query.pagina);
-  const patron = `%${buscar.trim().replace(/[\\%_]/g, '\\$&')}%`; 
-
-  const [[{ total }]] = await pool.query(
-    'SELECT COUNT(*) AS total FROM usuarios WHERE nombre_completo LIKE ? OR correo LIKE ?',
-    [patron, patron]
-  );
-  const [usuarios] = await pool.query(
-    `SELECT id_usuario, nombre_completo, correo, rol, tipo, plan, estado_cuenta
-       FROM vw_usuario WHERE nombre_completo LIKE ? OR correo LIKE ?
-      ORDER BY nombre_completo ASC, id_usuario ASC LIMIT ? OFFSET ?`,
-    [patron, patron, C.POR_PAGINA, (pagina - 1) * C.POR_PAGINA]
-  );
-  usuarios.forEach((u) => { u.estado_cuenta = NOMBRE_ESTADO(u.estado_cuenta); });
-
-  res.json({
-    usuarios, pagina, total,
-    totalPaginas: Math.ceil(total / C.POR_PAGINA),
-    ...(total === 0 && { mensaje: MSG.SIN_USUARIOS }), 
-  });
-});
-
-async function cuentaBloqueada(conn, id) {
-  const [[u]] = await conn.query(
-    'SELECT id_usuario, tipo, estado_cuenta FROM usuarios WHERE id_usuario = ? FOR UPDATE',
-    [id]
-  );
-  if (!u) throw new ErrorHttp(404, MSG.CUENTA_NO_ENCONTRADA);
-  if (u.tipo === C.TIPOS.ADMIN) throw new ErrorHttp(403, MSG.OPERACION_NO_PERMITIDA);
-  if (u.tipo === C.TIPOS.VENDEDOR) {
-    const [[filaPlan]] = await conn.query(
-      'SELECT plan FROM vendedor WHERE id_vendedor = ? FOR UPDATE',
-      [id]
-    );
-    u.plan = filaPlan?.plan || null;
-  } else if (u.tipo === C.TIPOS.CLIENTE) {
-    const [[filaPlan]] = await conn.query(
-      'SELECT plan FROM cliente WHERE id_cliente = ? FOR UPDATE',
-      [id]
-    );
-    u.plan = filaPlan?.plan || null;
-  }
-  return u;
+function escaparLike(texto) {
+  return `%${texto.replace(/[!%_]/g, '!$&')}%`;
 }
 
-const cambiarRol = asyncHandler(async (req, res) => {
-  const id = parseId(req.params.id);
-  const { accion } = req.body || {};
-  if (accion !== 'Premium' && accion !== 'Gratuito') {
-    throw new ErrorValidacion(['Dato inválido en Acción: Premium o Gratuito']);
-  }
-
-  const rolNuevo = await transaccion(async (conn) => {
-    const u = await cuentaBloqueada(conn, id);
-    let nuevo;
-    if (accion === 'Premium') {
-      if (!S.esGratuito(u)) throw new ErrorHttp(409, 'La cuenta ya es Premium');
-      nuevo = await S.activarPremium(conn, u, { fechaCorte: S.calcularFechaCorte(), renovacion: false });
-    } else {
-      if (!S.esPremium(u)) throw new ErrorHttp(409, 'La cuenta ya es Gratuita');
-      nuevo = await S.degradarAGratuito(conn, u); 
+const buscarUsuarios = asyncHandler(async (req, res) => {
+  const pagina = parsePagina(req.query.pagina);
+  const { buscar, rol, es_premium: rawPremium, id_tipo_vendedor: rawTipo } = req.query;
+  const where = [];
+  const params = [];
+  if (buscar !== undefined) {
+    if (typeof buscar !== 'string' || buscar.length > 100) {
+      throw new ErrorValidacion(['Dato inválido en Búsqueda: máximo 100 caracteres']);
     }
-    await conn.query(
-      'INSERT INTO historial_plan (id_admin, id_usuario, plan_anterior, plan_nuevo, fech_hrs) VALUES (?, ?, ?, ?, ?)',
-      [req.usuario.id, id, u.plan, accion, new Date()]
-    );
-    return nuevo;
+    where.push("(nombre LIKE ? ESCAPE '!' OR apellidos LIKE ? ESCAPE '!' OR correo LIKE ? ESCAPE '!')");
+    const patron = escaparLike(buscar.trim());
+    params.push(patron, patron, patron);
+  }
+  if (rol !== undefined) {
+    if (![C.TIPOS.ADMIN, C.TIPOS.VENDEDOR, C.TIPOS.CLIENTE].includes(rol)) {
+      throw new ErrorValidacion(['Dato inválido en Rol']);
+    }
+    where.push('rol = ?');
+    params.push(rol);
+  }
+  if (rawPremium !== undefined) {
+    if (rawPremium !== 'true' && rawPremium !== 'false') {
+      throw new ErrorValidacion(['Dato inválido en es_premium']);
+    }
+    where.push('es_premium = ?');
+    params.push(rawPremium === 'true' ? 1 : 0);
+  }
+  if (rawTipo !== undefined) {
+    const tipo = entero(rawTipo);
+    if (tipo === null || tipo < 1) throw new ErrorValidacion(['Dato inválido en id_tipo_vendedor']);
+    where.push('id_tipo_vendedor = ?');
+    params.push(tipo);
+  }
+  const condicion = where.length ? `WHERE ${where.join(' AND ')}` : '';
+  const [[{ total }]] = await pool.query(
+    `SELECT COUNT(*) AS total FROM vw_usuario ${condicion}`,
+    params
+  );
+  const [usuarios] = await pool.query(
+    `SELECT id_usuario, nombre_completo, correo, rol, tipo_vendedor, es_premium, estado_cuenta, id_tipo_vendedor
+       FROM vw_usuario ${condicion}
+      ORDER BY nombre, apellidos, id_usuario LIMIT ? OFFSET ?`,
+    [...params, C.POR_PAGINA, (pagina - 1) * C.POR_PAGINA]
+  );
+  res.json({
+    usuarios: usuarios.map((usuario) => ({ ...usuario, es_premium: Boolean(usuario.es_premium) })),
+    pagina,
+    total: Number(total),
+    totalPaginas: Math.ceil(total / C.POR_PAGINA),
   });
-
-  res.json({ mensaje: 'Rol actualizado correctamente', rol: rolNuevo });
 });
-async function marcarFueraDeRutaSiVendedor(conn, tipo, id) {
-  if (tipo === C.TIPOS.VENDEDOR) { // RF22.6
-    await conn.query("UPDATE ubi_vendedor SET disponibilidad = 'Fuera de ruta' WHERE id_vendedor = ?", [id]);
+
+const cambiarPremium = asyncHandler(async (req, res) => {
+  const idVendedor = parseId(req.params.id);
+  const { otorgar } = req.body || {};
+  if (typeof otorgar !== 'boolean') throw new ErrorValidacion(['Dato inválido en Otorgar: debe ser booleano']);
+  const premium = await transaccion(async (conn) => {
+    const [[cuenta]] = await conn.query(
+      `SELECT r.nombre AS rol FROM usuario u JOIN rol r ON r.id_rol = u.id_rol
+        WHERE u.id_usuario = ? FOR UPDATE`,
+      [idVendedor]
+    );
+    if (!cuenta) throw new ErrorHttp(404, MSG.CUENTA_NO_ENCONTRADA);
+    if (cuenta.rol !== C.TIPOS.VENDEDOR) throw new ErrorHttp(400, 'Premium solo está disponible para vendedores');
+    const [[vendedor]] = await conn.query('SELECT id_vendedor FROM vendedor WHERE id_vendedor = ? FOR UPDATE', [idVendedor]);
+    if (!vendedor) throw new ErrorHttp(404, MSG.CUENTA_NO_ENCONTRADA);
+    const [[actual]] = await conn.query('SELECT id_vendedor FROM premium_vendedor WHERE id_vendedor = ? FOR UPDATE', [idVendedor]);
+    if (Boolean(actual) === otorgar) throw new ErrorHttp(409, otorgar ? 'El vendedor ya es Premium' : 'El vendedor no es Premium');
+    if (otorgar) await S.activarPremium(conn, idVendedor);
+    else await S.revocarPremium(conn, idVendedor);
+    await conn.query(
+      'INSERT INTO historial_premium (id_admin, id_vendedor, accion) VALUES (?, ?, ?)',
+      [req.usuario.id, idVendedor, otorgar ? 'Otorgar' : 'Revocar']
+    );
+    return otorgar;
+  });
+  res.json({ id_usuario: idVendedor, es_premium: premium });
+});
+
+async function buscarCuenta(conn, id, lock = true) {
+  const [[cuenta]] = await conn.query(
+    `SELECT u.id_usuario, r.nombre AS rol, ec.nombre AS estado_cuenta
+       FROM usuario u JOIN rol r ON r.id_rol = u.id_rol
+       JOIN estado_cuenta ec ON ec.id_estado_cuenta = u.id_estado_cuenta
+      WHERE u.id_usuario = ?${lock ? ' FOR UPDATE' : ''}`,
+    [id]
+  );
+  if (!cuenta) throw new ErrorHttp(404, MSG.CUENTA_NO_ENCONTRADA);
+  if (cuenta.rol === C.TIPOS.ADMIN) throw new ErrorHttp(403, MSG.OPERACION_NO_PERMITIDA);
+  return cuenta;
+}
+
+async function suspenderVendedor(conn, cuenta) {
+  if (cuenta.rol === C.TIPOS.VENDEDOR) {
+    await conn.query('UPDATE jornada SET fin = ? WHERE id_vendedor = ? AND fin IS NULL', [new Date(), cuenta.id_usuario]);
   }
 }
 
 const suspenderIndefinidamente = asyncHandler(async (req, res) => {
   const id = parseId(req.params.id);
   await transaccion(async (conn) => {
-    const u = await cuentaBloqueada(conn, id);
-    if (u.estado_cuenta === C.ESTADOS_CUENTA.SUSPENDIDA_INDEF) {
+    const cuenta = await buscarCuenta(conn, id);
+    if (cuenta.estado_cuenta === C.ESTADOS_CUENTA.SUSPENDIDA_INDEF) {
       throw new ErrorHttp(409, 'La cuenta ya está suspendida indefinidamente');
     }
-    await conn.query('UPDATE usuarios SET estado_cuenta = ?, fin_suspension = NULL WHERE id_usuario = ?',
-      [C.ESTADOS_CUENTA.SUSPENDIDA_INDEF, id]);
-    await marcarFueraDeRutaSiVendedor(conn, u.tipo, id);
+    await conn.query(
+      'UPDATE usuario SET id_estado_cuenta = (SELECT id_estado_cuenta FROM estado_cuenta WHERE nombre = ?) WHERE id_usuario = ?',
+      [C.ESTADOS_CUENTA.SUSPENDIDA_INDEF, id]
+    );
+    await conn.query('DELETE FROM suspension WHERE id_usuario = ?', [id]);
+    await suspenderVendedor(conn, cuenta);
   });
-  await sesiones.revocarUsuario(id, 'suspendido'); // lo saca en el acto, sin esperar su siguiente peticion
+  await sesiones.revocarUsuario(id, 'suspendido');
   res.json({ mensaje: 'Usuario suspendido indefinidamente' });
 });
 
 const suspenderTemporalmente = asyncHandler(async (req, res) => {
   const id = parseId(req.params.id);
   const dias = req.body?.dias;
-  const errores = validar([{ campo: 'dias', valor: dias }]);
-  if (errores.length) throw new ErrorValidacion(errores);
-
-  const fin = new Date(Date.now() + dias * F.DIA); 
+  if (!Number.isSafeInteger(dias) || dias < 1 || dias > 365) {
+    throw new ErrorValidacion(['Dato inválido en Días: debe ser un entero de 1 a 365']);
+  }
+  const fin = new Date(Date.now() + dias * F.DIA);
   await transaccion(async (conn) => {
-    const u = await cuentaBloqueada(conn, id);
-    if (u.estado_cuenta !== C.ESTADOS_CUENTA.ACTIVA) {
+    const cuenta = await buscarCuenta(conn, id);
+    if (cuenta.estado_cuenta !== C.ESTADOS_CUENTA.ACTIVA) {
       throw new ErrorHttp(409, 'Solo se puede suspender temporalmente una cuenta Activa');
     }
-    await conn.query('UPDATE usuarios SET estado_cuenta = ?, fin_suspension = ? WHERE id_usuario = ?',
-      [C.ESTADOS_CUENTA.SUSPENDIDA_TEMP, fin, id]);
-    await marcarFueraDeRutaSiVendedor(conn, u.tipo, id);
+    await conn.query(
+      'UPDATE usuario SET id_estado_cuenta = (SELECT id_estado_cuenta FROM estado_cuenta WHERE nombre = ?) WHERE id_usuario = ?',
+      [C.ESTADOS_CUENTA.SUSPENDIDA_TEMP, id]
+    );
+    await conn.query(
+      `INSERT INTO suspension (id_usuario, fin) VALUES (?, ?)
+       ON DUPLICATE KEY UPDATE fin = VALUES(fin)`,
+      [id, fin]
+    );
+    await suspenderVendedor(conn, cuenta);
   });
   await sesiones.revocarUsuario(id, 'suspendido');
   res.json({ mensaje: `Usuario suspendido por ${dias} día(s)`, fin_suspension: fin.toISOString() });
@@ -300,11 +301,12 @@ const suspenderTemporalmente = asyncHandler(async (req, res) => {
 const reactivarCuenta = asyncHandler(async (req, res) => {
   const id = parseId(req.params.id);
   await transaccion(async (conn) => {
-    const u = await cuentaBloqueada(conn, id);
-    if (u.estado_cuenta === C.ESTADOS_CUENTA.ACTIVA) throw new ErrorHttp(409, 'La cuenta ya está Activa');
-    // El vendedor permanece "Fuera de ruta" hasta que el mismo presione RF6.1
-    await conn.query('UPDATE usuarios SET estado_cuenta = ?, fin_suspension = NULL WHERE id_usuario = ?',
-      [C.ESTADOS_CUENTA.ACTIVA, id]);
+    await buscarCuenta(conn, id);
+    await conn.query(
+      'UPDATE usuario SET id_estado_cuenta = (SELECT id_estado_cuenta FROM estado_cuenta WHERE nombre = ?) WHERE id_usuario = ?',
+      [C.ESTADOS_CUENTA.ACTIVA, id]
+    );
+    await conn.query('DELETE FROM suspension WHERE id_usuario = ?', [id]);
   });
   res.json({ mensaje: 'Cuenta reactivada' });
 });
@@ -313,38 +315,27 @@ const consultarReportes = asyncHandler(async (req, res) => {
   const pagina = parsePagina(req.query.pagina);
   const [[{ total }]] = await pool.query('SELECT COUNT(*) AS total FROM reporte');
   const [reportes] = await pool.query(
-    `SELECT r.id_reporte,
-            e.tipo AS tipo_emisor,
-            r.id_emisor, r.id_reportado, r.fech_hrs, r.motivo
-       FROM reporte r JOIN usuarios e ON e.id_usuario = r.id_emisor
-      ORDER BY r.fech_hrs DESC, r.id_reporte DESC LIMIT ? OFFSET ?`,
+    `SELECT r.id_reporte, e.rol AS tipo_emisor, r.id_emisor, r.id_reportado, r.fecha, r.motivo
+       FROM reporte r JOIN vw_usuario e ON e.id_usuario = r.id_emisor
+      ORDER BY r.fecha DESC, r.id_reporte DESC LIMIT ? OFFSET ?`,
     [C.POR_PAGINA, (pagina - 1) * C.POR_PAGINA]
   );
-  res.json({
-    reportes, pagina, total,
-    totalPaginas: Math.ceil(total / C.POR_PAGINA),
-    ...(total === 0 && { mensaje: MSG.SIN_REPORTES }), 
-  });
+  res.json({ reportes, pagina, total: Number(total), totalPaginas: Math.ceil(total / C.POR_PAGINA) });
 });
 
 const consultarMensajesContacto = asyncHandler(async (req, res) => {
   const pagina = parsePagina(req.query.pagina);
   const [[{ total }]] = await pool.query('SELECT COUNT(*) AS total FROM mensaje_contacto');
   const [mensajes] = await pool.query(
-    `SELECT id_mensaje, nombre, correo, mensaje, fecha_creacion
-       FROM mensaje_contacto
-      ORDER BY fecha_creacion DESC, id_mensaje DESC
-      LIMIT ? OFFSET ?`,
+    `SELECT id_mensaje, nombre, correo, mensaje, fecha_creacion FROM mensaje_contacto
+      ORDER BY fecha_creacion DESC, id_mensaje DESC LIMIT ? OFFSET ?`,
     [C.POR_PAGINA, (pagina - 1) * C.POR_PAGINA]
   );
-  res.json({
-    mensajes, pagina, total,
-    totalPaginas: Math.ceil(total / C.POR_PAGINA),
-  });
+  res.json({ mensajes, pagina, total: Number(total), totalPaginas: Math.ceil(total / C.POR_PAGINA) });
 });
 
 module.exports = {
   crearAdministrador, consultarSuscripciones, consultarTrafico, consultarIngresos, exportarIngresos,
-  buscarUsuarios, cambiarRol, suspenderIndefinidamente, suspenderTemporalmente, reactivarCuenta,
+  buscarUsuarios, cambiarPremium, suspenderIndefinidamente, suspenderTemporalmente, reactivarCuenta,
   consultarReportes, consultarMensajesContacto,
 };
