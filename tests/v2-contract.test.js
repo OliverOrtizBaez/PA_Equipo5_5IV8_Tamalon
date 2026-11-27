@@ -92,7 +92,32 @@ test('estadísticas responde 403 con código PREMIUM_REQUERIDO', async () => {
   assert.equal(error.extra.codigo, 'PREMIUM_REQUERIDO');
 });
 
-test('historial GPS descarta un punto a menos de 25 m antes de 60 s', async () => {
+test('actualizar ubicación acepta latitud y longitud y conserva el filtrado del historial GPS', async () => {
+  let inserts = 0;
+  queryHandler = async (sql) => {
+    if (sql.includes('FROM jornada WHERE id_vendedor')) return [[{ id_jornada: 55 }]];
+    if (sql.includes('FROM ubicacion_historial')) {
+      return [[{ latitud: 19.43, longitud: -99.13, registrado: new Date() }]];
+    }
+    if (sql.startsWith('INSERT INTO ubicacion_historial')) { inserts += 1; return [{ affectedRows: 1 }]; }
+    if (sql.startsWith('SELECT latitud, longitud, actualizado FROM ubicacion_actual')) {
+      return [[{ latitud: '19.43', longitud: '-99.13', actualizado: new Date() }]];
+    }
+    return [{ affectedRows: 1 }];
+  };
+  const { res, error } = await llamar(ubicacion.actualizarUbicacion, {
+    usuario: { id: 9, tipo: 'Vendedor' },
+    body: { latitud: 19.43, longitud: -99.13 },
+  });
+  assert.equal(error, undefined);
+  assert.equal(inserts, 0);
+  assert.equal(res.body.ubicacion.latitud, 19.43);
+  assert.equal(res.body.ubicacion.longitud, -99.13);
+  assert.equal(res.body.ubicacion.disponibilidad, 'En ruta');
+  assert.ok(res.body.ubicacion.ultima_actualizacion instanceof Date);
+});
+
+test('actualizar ubicación conserva el formato histórico de puntos', async () => {
   let inserts = 0;
   queryHandler = async (sql) => {
     if (sql.includes('FROM jornada WHERE id_vendedor')) return [[{ id_jornada: 55 }]];
@@ -100,6 +125,9 @@ test('historial GPS descarta un punto a menos de 25 m antes de 60 s', async () =
       return [[{ latitud: 0, longitud: 0, registrado: new Date() }]];
     }
     if (sql.startsWith('INSERT INTO ubicacion_historial')) { inserts += 1; return [{ affectedRows: 1 }]; }
+    if (sql.startsWith('SELECT latitud, longitud, actualizado FROM ubicacion_actual')) {
+      return [[{ latitud: 0, longitud: 0.00005, actualizado: new Date() }]];
+    }
     return [{ affectedRows: 1 }];
   };
   const { res, error } = await llamar(ubicacion.actualizarUbicacion, {
@@ -108,7 +136,66 @@ test('historial GPS descarta un punto a menos de 25 m antes de 60 s', async () =
   });
   assert.equal(error, undefined);
   assert.equal(inserts, 0);
-  assert.deepEqual(res.body, { en_ruta: true, recibido: 1 });
+  assert.equal(res.body.ubicacion.disponibilidad, 'En ruta');
+});
+
+test('cercanos filtra jornada abierta y ubicación reciente con el contrato móvil', async () => {
+  let sqlCercanos = '';
+  let paramsCercanos = [];
+  queryHandler = async (sql, params = []) => {
+    sqlCercanos = sql;
+    paramsCercanos = params;
+    return [[{
+      id_usuario: 14,
+      nombre_completo: 'Vendedora Ejemplo',
+      foto_perfil: 'foto.jpg',
+      rol: 'vendedor',
+      plan: 'premium',
+      latitud: '19.43',
+      longitud: '-99.13',
+      distancia_m: '150',
+      ultima_actualizacion: new Date(),
+    }]];
+  };
+  const { res, error } = await llamar(ubicacion.obtenerCercanos, {
+    query: { lat: '19.4', lng: '-99.1', radio_km: '2' },
+  });
+  assert.equal(error, undefined);
+  assert.match(sqlCercanos, /j\.fin IS NULL/);
+  assert.match(sqlCercanos, /ua\.actualizado >= \?/);
+  assert.match(sqlCercanos, /u\.id_estado_cuenta = 1/);
+  assert.equal(paramsCercanos[0], -99.1);
+  assert.equal(paramsCercanos[1], 19.4);
+  assert.ok(paramsCercanos[2] instanceof Date);
+  assert.equal(paramsCercanos[3], 2000);
+  assert.deepEqual(Object.keys(res.body.vendedores[0]), [
+    'id_usuario', 'nombre_completo', 'foto_perfil', 'rol', 'plan',
+    'latitud', 'longitud', 'distancia_m', 'ultima_actualizacion',
+  ]);
+  assert.equal(res.body.vendedores[0].latitud, 19.43);
+  assert.equal(res.body.vendedores[0].distancia_m, 150);
+});
+
+test('finalizar jornada responde kilometros con el nombre del contrato Android', async () => {
+  queryHandler = async (sql) => {
+    if (sql.startsWith('SELECT id_jornada, inicio FROM jornada')) {
+      return [[{ id_jornada: 55, inicio: new Date(Date.now() - 60000) }]];
+    }
+    if (sql.startsWith('SELECT latitud, longitud FROM ubicacion_historial')) {
+      return [[
+        { latitud: 0, longitud: 0 },
+        { latitud: 0, longitud: 0.01 },
+      ]];
+    }
+    return [{ affectedRows: 1 }];
+  };
+  const { res, error } = await llamar(ubicacion.finalizarJornada, {
+    usuario: { id: 9, tipo: 'Vendedor' },
+  });
+  assert.equal(error, undefined);
+  assert.equal(typeof res.body.minutos, 'number');
+  assert.equal(typeof res.body.kilometros, 'number');
+  assert.equal(Object.prototype.hasOwnProperty.call(res.body, 'km'), false);
 });
 
 test('listado admin sin buscar devuelve todos y ordena por nombre, apellidos e ID', async () => {

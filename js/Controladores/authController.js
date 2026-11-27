@@ -48,7 +48,7 @@ async function procesarRecuperacion(correo) {
     'INSERT INTO recuperacion_pass (id_usuario, token, fecha_emision, fecha_expiracion, valido) VALUES (?, ?, ?, ?, 1)',
     [idUsuario, hashToken(token), ahora, sumarMinutos(ahora, C.RECUPERACION_VIGENCIA_MIN)]
   );
-  const base = (process.env.FRONTEND_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:3000').replace(/\/$/, '');
+  const base = (process.env.FRONTEND_URL || process.env.RENDER_EXTERNAL_URL || 'https://pa-equipo5-5iv8-tamalon-rap2.onrender.com/').replace(/\/$/, '');
   try {
     await enviarRecuperacion(correo, `${base}/html/restablecer.html?token=${token}`);
   } catch (err) {

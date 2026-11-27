@@ -68,7 +68,7 @@ const iniciarJornada = asyncHandler(async (req, res) => {
     );
     return { jornada: nueva, existente: false };
   });
-  res.status(jornada.existente ? 200 : 201).json(jornada.jornada);
+  res.status(jornada.existente ? 200 : 201).json({ ...jornada.jornada, en_ruta: true });
 });
 
 const finalizarJornada = asyncHandler(async (req, res) => {
@@ -82,13 +82,15 @@ const finalizarJornada = asyncHandler(async (req, res) => {
     await conn.query('UPDATE jornada SET fin = ? WHERE id_jornada = ?', [fin, jornada.id_jornada]);
     const km = await distanciaJornada(conn, jornada.id_jornada);
     const minutos = Math.max(0, Math.round((fin.getTime() - new Date(jornada.inicio).getTime()) / 60000));
-    return { id_jornada: jornada.id_jornada, fin, minutos, km: Number(km.toFixed(3)) };
+    return { id_jornada: jornada.id_jornada, fin, minutos, kilometros: Number(km.toFixed(3)) };
   });
   res.json(resultado);
 });
 
 const actualizarUbicacion = asyncHandler(async (req, res) => {
-  const puntos = req.body?.puntos;
+  const puntos = Array.isArray(req.body?.puntos)
+    ? req.body.puntos
+    : [{ latitud: req.body?.latitud, longitud: req.body?.longitud, precision_m: req.body?.precision_m, t: Date.now() }];
   if (!Array.isArray(puntos) || puntos.length < 1 || puntos.length > 20) {
     throw new ErrorValidacion(['Dato inválido en Puntos: debe contener de 1 a 20 ubicaciones']);
   }
@@ -142,9 +144,21 @@ const actualizarUbicacion = asyncHandler(async (req, res) => {
                                precision_m = VALUES(precision_m), actualizado = CURRENT_TIMESTAMP(3)`,
       [req.usuario.id, masReciente.latitud, masReciente.longitud, masReciente.precision_m]
     );
-    return validos.length;
+    const [[ubicacion]] = await conn.query(
+      'SELECT latitud, longitud, actualizado FROM ubicacion_actual WHERE id_vendedor = ?',
+      [req.usuario.id]
+    );
+    return { recibidos: validos.length, ubicacion };
   });
-  res.json({ en_ruta: true, recibido: recibidos });
+  res.json({
+    mensaje: 'Ubicación actualizada',
+    ubicacion: {
+      latitud: Number(recibidos.ubicacion.latitud),
+      longitud: Number(recibidos.ubicacion.longitud),
+      disponibilidad: 'En ruta',
+      ultima_actualizacion: recibidos.ubicacion.actualizado,
+    },
+  });
 });
 
 const obtenerCercanos = asyncHandler(async (req, res) => {
@@ -178,14 +192,13 @@ const obtenerCercanos = asyncHandler(async (req, res) => {
   const [filas] = await pool.query(
     `SELECT * FROM (
        SELECT u.id_usuario, CONCAT(u.nombre, ' ', u.apellidos) AS nombre_completo,
-              u.foto_perfil, (pv.id_vendedor IS NOT NULL) AS es_premium,
-              v.id_tipo_vendedor, tv.nombre AS tipo_vendedor, tv.icono AS icono_vendedor,
+              u.foto_perfil, 'vendedor' AS rol,
+              CASE WHEN pv.id_vendedor IS NOT NULL THEN 'premium' ELSE 'gratuito' END AS plan,
               ua.latitud, ua.longitud, ua.actualizado AS ultima_actualizacion,
               ST_Distance_Sphere(POINT(?, ?), POINT(ua.longitud, ua.latitud)) AS distancia_m
          FROM jornada j
          JOIN vendedor v ON v.id_vendedor = j.id_vendedor
          JOIN usuario u ON u.id_usuario = v.id_vendedor
-         JOIN tipo_vendedor tv ON tv.id_tipo_vendedor = v.id_tipo_vendedor
          LEFT JOIN premium_vendedor pv ON pv.id_vendedor = v.id_vendedor
          JOIN ubicacion_actual ua ON ua.id_vendedor = v.id_vendedor
         WHERE ${condiciones.join(' AND ')}
@@ -196,9 +209,15 @@ const obtenerCercanos = asyncHandler(async (req, res) => {
   );
   res.json({
     vendedores: filas.map((fila) => ({
-      ...fila,
-      es_premium: Boolean(fila.es_premium),
+      id_usuario: Number(fila.id_usuario),
+      nombre_completo: fila.nombre_completo,
+      foto_perfil: fila.foto_perfil,
+      rol: fila.rol,
+      plan: fila.plan,
+      latitud: Number(fila.latitud),
+      longitud: Number(fila.longitud),
       distancia_m: Number(fila.distancia_m),
+      ultima_actualizacion: fila.ultima_actualizacion,
     })),
   });
 });

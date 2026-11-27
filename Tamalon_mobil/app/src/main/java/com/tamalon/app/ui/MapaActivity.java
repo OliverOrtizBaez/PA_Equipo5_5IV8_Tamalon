@@ -28,16 +28,19 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import android.os.Build;
 import com.tamalon.app.BuildConfig;
 import com.tamalon.app.R;
 import com.tamalon.app.config.AppConfig;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.tamalon.app.data.local.AppDatabase;
+import com.tamalon.app.location.UbicacionService;
 import com.tamalon.app.model.Ruta;
 import com.tamalon.app.network.*;
 
@@ -66,7 +69,7 @@ import retrofit2.Response;
 public class MapaActivity extends AppCompatActivity {
     private static final String TAG = "MapaActivity";
     private static final int PERM_LOCATION = 1001;
-    private static final long RADIO_METROS = 500L;
+    private static final long RADIO_METROS = 3000L;
     private static final double LIMITE_MAPA_METROS = 800.0;
 
     private static boolean loggedUbicacionMia = false;
@@ -170,6 +173,31 @@ public class MapaActivity extends AppCompatActivity {
             if (categoryScroll != null) categoryScroll.setVisibility(View.GONE);
             if (vendorRouteCard != null) vendorRouteCard.setVisibility(View.VISIBLE);
             btnToggleRuta.setOnClickListener(v -> toggleDisponibilidad());
+
+            if (usuarioId > 0) {
+                apiService.obtenerEstadoVendedor(usuarioId).enqueue(new Callback<VendedorEstadoResponse>() {
+                    @Override
+                    public void onResponse(@NonNull Call<VendedorEstadoResponse> call, @NonNull Response<VendedorEstadoResponse> response) {
+                        if (response.isSuccessful() && response.body() != null) {
+                            enRuta = response.body().enRuta;
+                            runOnUiThread(() -> {
+                                actualizarVistaEstadoRuta();
+                                if (enRuta) {
+                                    Intent serviceIntent = new Intent(MapaActivity.this, UbicacionService.class);
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                        startForegroundService(serviceIntent);
+                                    } else {
+                                        startService(serviceIntent);
+                                    }
+                                }
+                            });
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(@NonNull Call<VendedorEstadoResponse> call, @NonNull Throwable t) {}
+                });
+            }
             if (vendorQuickCatalogs != null) {
                 vendorQuickCatalogs.setOnClickListener(v -> {
                     Intent i = new Intent(this, CatalogoActivity.class);
@@ -803,13 +831,77 @@ public class MapaActivity extends AppCompatActivity {
             Toast.makeText(this, "Espera a que el mapa encuentre tu ubicación y vuelve a intentarlo", Toast.LENGTH_LONG).show();
             return;
         }
-        enRuta = !enRuta;
-        actualizarVistaEstadoRuta();
-        if (enRuta && ultimaUbicacion != null) {
-            enviarUbicacionServidor(ultimaUbicacion.getLatitude(), ultimaUbicacion.getLongitude());
-        } else if (!enRuta) {
-            enviarFueraDeRutaServidor();
-            refrescarVendedoresCercanos();
+
+        boolean nuevoEstado = !enRuta;
+        if (nuevoEstado) {
+            apiService.iniciarJornada().enqueue(new Callback<Void>() {
+                @Override
+                public void onResponse(@NonNull Call<Void> call, @NonNull Response<Void> response) {
+                    enRuta = true;
+                    runOnUiThread(() -> {
+                        actualizarVistaEstadoRuta();
+                        Intent serviceIntent = new Intent(MapaActivity.this, UbicacionService.class);
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            startForegroundService(serviceIntent);
+                        } else {
+                            startService(serviceIntent);
+                        }
+                        if (ultimaUbicacion != null) {
+                            enviarUbicacionServidor(ultimaUbicacion.getLatitude(), ultimaUbicacion.getLongitude());
+                        }
+                        Toast.makeText(MapaActivity.this, "Recorrido iniciado", Toast.LENGTH_SHORT).show();
+                    });
+                }
+
+                @Override
+                public void onFailure(@NonNull Call<Void> call, @NonNull Throwable t) {
+                    Toast.makeText(MapaActivity.this, "Error al iniciar recorrido en el servidor", Toast.LENGTH_SHORT).show();
+                }
+            });
+        } else {
+            apiService.finalizarJornada().enqueue(new Callback<JornadaResumenResponse>() {
+                @Override
+                public void onResponse(@NonNull Call<JornadaResumenResponse> call, @NonNull Response<JornadaResumenResponse> response) {
+                    enRuta = false;
+                    runOnUiThread(() -> {
+                        actualizarVistaEstadoRuta();
+                        Intent stopIntent = new Intent(MapaActivity.this, UbicacionService.class);
+                        stopIntent.setAction(UbicacionService.ACTION_STOP_JORNADA);
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            startForegroundService(stopIntent);
+                        } else {
+                            startService(stopIntent);
+                        }
+                        enviarFueraDeRutaServidor();
+                        refrescarVendedoresCercanos();
+
+                        String resumen = "Recorrido finalizado";
+                        if (response.isSuccessful() && response.body() != null) {
+                            JornadaResumenResponse res = response.body();
+                            resumen = String.format(java.util.Locale.getDefault(), "Recorrido finalizado: %d min, %.2f km", res.minutos, res.kilometros);
+                        }
+                        new AlertDialog.Builder(MapaActivity.this)
+                                .setTitle("Resumen del recorrido")
+                                .setMessage(resumen)
+                                .setPositiveButton("Aceptar", null)
+                                .show();
+                    });
+                }
+
+                @Override
+                public void onFailure(@NonNull Call<JornadaResumenResponse> call, @NonNull Throwable t) {
+                    enRuta = false;
+                    runOnUiThread(() -> {
+                        actualizarVistaEstadoRuta();
+                        try {
+                            stopService(new Intent(MapaActivity.this, UbicacionService.class));
+                        } catch (Exception ignored) {}
+                        enviarFueraDeRutaServidor();
+                        refrescarVendedoresCercanos();
+                        Toast.makeText(MapaActivity.this, "Recorrido finalizado", Toast.LENGTH_SHORT).show();
+                    });
+                }
+            });
         }
     }
 
