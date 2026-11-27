@@ -280,7 +280,11 @@ public class MapaActivity extends AppCompatActivity {
         if (tienePermisoUbicacion()) {
             overlayPermission.setVisibility(View.GONE);
             if (!mapaInicializado) inicializarMapa();
-            else iniciarActualizacionesUbicacion();
+            else {
+                iniciarActualizacionesUbicacion();
+                handler.removeCallbacks(refrescarVendedoresRunnable);
+                handler.post(refrescarVendedoresRunnable);
+            }
         }
     }
 
@@ -482,9 +486,9 @@ public class MapaActivity extends AppCompatActivity {
     }
 
     private void refrescarVendedoresCercanos() {
-        if (ultimaUbicacion == null || mapView == null || isFinishing()) return;
-        double lat = ultimaUbicacion.getLatitude();
-        double lng = ultimaUbicacion.getLongitude();
+        if (mapView == null || isFinishing()) return;
+        double lat = ultimaUbicacion != null ? ultimaUbicacion.getLatitude() : 19.4326;
+        double lng = ultimaUbicacion != null ? ultimaUbicacion.getLongitude() : -99.1332;
 
         String buscar = textoBusquedaMapa.isEmpty() ? null : textoBusquedaMapa;
 
