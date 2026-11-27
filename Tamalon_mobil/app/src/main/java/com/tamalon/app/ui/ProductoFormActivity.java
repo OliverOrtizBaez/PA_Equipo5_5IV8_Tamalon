@@ -23,6 +23,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.bumptech.glide.Glide;
 import com.tamalon.app.R;
 import com.tamalon.app.data.local.AppDatabase;
 import com.tamalon.app.model.Producto;
@@ -35,6 +36,7 @@ import com.tamalon.app.network.CrearProductoRequest;
 import com.tamalon.app.network.DtoUser;
 import com.tamalon.app.network.ProductoDto;
 import com.tamalon.app.network.TokenStore;
+import com.tamalon.app.util.ImagenUploader;
 import com.tamalon.app.validation.ResultadoValidacion;
 import com.tamalon.app.validation.ValidadorProducto;
 
@@ -49,10 +51,7 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 /**
- * Formulario de creación y edición de producto.
- * Carga dinámicamente las categorías desde el servidor (GET api/tipos-vendedor/{id}/categorias).
- * Si falla la red, muestra error con botón "Reintentar" y deshabilita el botón Guardar.
- * Envía id_categoria en el POST/PUT del producto.
+ * Formulario de creación y edición de producto con subida de imágenes a través de ImagenUploader.
  */
 public class ProductoFormActivity extends AppCompatActivity {
 
@@ -85,10 +84,9 @@ public class ProductoFormActivity extends AppCompatActivity {
     private int idCategoriaSeleccionada = -1;
     private String nombreCategoriaSeleccionada = "";
     private String categoriaPendienteEditar = null;
+    private Uri uriImagenSeleccionada = null;
     private final List<Button> chipButtons = new ArrayList<>();
     private String imagenSeleccionada = "";
-    private long imagenTamanoBytes = 0L;
-    private String imagenNombreArchivo = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -146,7 +144,7 @@ public class ProductoFormActivity extends AppCompatActivity {
 
         if (btnSave != null) {
             btnSave.setBackgroundTintList(null);
-            btnSave.setEnabled(false); // Deshabilitado hasta que carguen las categorías
+            btnSave.setEnabled(false);
             btnSave.setOnClickListener(v -> guardarProducto());
         }
 
@@ -227,7 +225,7 @@ public class ProductoFormActivity extends AppCompatActivity {
             errorLayout.addView(tvErr);
 
             Button btnRetry = new Button(this);
-            btnRetry.setText("Reintentar");
+            btnRetry.setText(getString(R.string.btn_retry));
             btnRetry.setBackgroundTintList(null);
             btnRetry.setOnClickListener(v -> cargarCategoriasServidor());
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
@@ -261,9 +259,7 @@ public class ProductoFormActivity extends AppCompatActivity {
         if (switchVisible != null) switchVisible.setChecked(visible);
         if (img != null && !img.trim().isEmpty()) {
             imagenSeleccionada = img.trim();
-            ivPreview.setPadding(0, 0, 0, 0);
-            ivPreview.setScaleType(ImageView.ScaleType.CENTER_CROP);
-            ImagenPerfil.mostrarProducto(ivPreview, imagenSeleccionada, this);
+            Glide.with(this).load(imagenSeleccionada).placeholder(R.drawable.ic_photo_placeholder).into(ivPreview);
             if (tvImageHint != null) tvImageHint.setText("Fotografía cargada");
             if (btnPickImage != null) btnPickImage.setText("Cambiar foto");
         }
@@ -407,9 +403,7 @@ public class ProductoFormActivity extends AppCompatActivity {
                 }
                 if (p.imagenUri != null && !p.imagenUri.trim().isEmpty()) {
                     imagenSeleccionada = p.imagenUri.trim();
-                    ivPreview.setPadding(0, 0, 0, 0);
-                    ivPreview.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                    ImagenPerfil.mostrarProducto(ivPreview, imagenSeleccionada, this);
+                    Glide.with(this).load(imagenSeleccionada).placeholder(R.drawable.ic_photo_placeholder).into(ivPreview);
                     if (tvImageHint != null) tvImageHint.setText("Fotografía cargada");
                     if (btnPickImage != null) btnPickImage.setText("Cambiar foto");
                 }
@@ -441,46 +435,15 @@ public class ProductoFormActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode != REQUEST_PRODUCT_IMAGE || resultCode != RESULT_OK || data == null || data.getData() == null) return;
         Uri origen = data.getData();
+        uriImagenSeleccionada = origen;
         String nombreArchivo = obtenerNombreArchivo(origen);
-        long tamanoBytes = obtenerTamanoArchivo(origen);
-        String mime = getContentResolver().getType(origen);
 
-        boolean formatoValido = (mime != null && (mime.equalsIgnoreCase("image/jpeg") || mime.equalsIgnoreCase("image/jpg") || mime.equalsIgnoreCase("image/png")))
-                || (nombreArchivo != null && (nombreArchivo.toLowerCase().endsWith(".jpg") || nombreArchivo.toLowerCase().endsWith(".jpeg") || nombreArchivo.toLowerCase().endsWith(".png")));
-
-        if (!formatoValido) {
-            if (tvImageError != null) {
-                tvImageError.setText("Dato inválido en Fotografía: solo se aceptan imágenes JPG o PNG.");
-                tvImageError.setVisibility(View.VISIBLE);
-            }
-            return;
-        }
-        if (tamanoBytes > 5 * 1024 * 1024L) {
-            if (tvImageError != null) {
-                tvImageError.setText("Dato inválido en Fotografía: el peso máximo permitido es 5 MB.");
-                tvImageError.setVisibility(View.VISIBLE);
-            }
-            return;
-        }
-
-        executor.execute(() -> {
-            try {
-                String dataUri = ImagenPerfil.codificarComoDataUri(this, origen);
-                runOnUiThread(() -> {
-                    imagenSeleccionada = dataUri;
-                    imagenTamanoBytes = tamanoBytes;
-                    imagenNombreArchivo = nombreArchivo != null ? nombreArchivo : "producto.jpg";
-                    if (tvImageError != null) tvImageError.setVisibility(View.GONE);
-                    ivPreview.setPadding(0, 0, 0, 0);
-                    ivPreview.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                    ImagenPerfil.mostrarProducto(ivPreview, imagenSeleccionada, this);
-                    if (tvImageHint != null) tvImageHint.setText(imagenNombreArchivo);
-                    if (btnPickImage != null) btnPickImage.setText("Cambiar foto");
-                });
-            } catch (Exception e) {
-                runOnUiThread(() -> Toast.makeText(this, "No se pudo procesar la foto seleccionada", Toast.LENGTH_LONG).show());
-            }
-        });
+        if (tvImageError != null) tvImageError.setVisibility(View.GONE);
+        ivPreview.setPadding(0, 0, 0, 0);
+        ivPreview.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        Glide.with(this).load(origen).into(ivPreview);
+        if (tvImageHint != null) tvImageHint.setText(nombreArchivo != null ? nombreArchivo : "producto.jpg");
+        if (btnPickImage != null) btnPickImage.setText("Cambiar foto");
     }
 
     private String obtenerNombreArchivo(Uri uri) {
@@ -493,16 +456,6 @@ public class ProductoFormActivity extends AppCompatActivity {
         return uri.getLastPathSegment();
     }
 
-    private long obtenerTamanoArchivo(Uri uri) {
-        try (Cursor cursor = getContentResolver().query(uri, null, null, null, null)) {
-            if (cursor != null && cursor.moveToFirst()) {
-                int idx = cursor.getColumnIndex(OpenableColumns.SIZE);
-                if (idx >= 0) return cursor.getLong(idx);
-            }
-        } catch (Exception ignored) { }
-        return 0L;
-    }
-
     private void guardarProducto() {
         if (tvGlobalError != null) tvGlobalError.setVisibility(View.GONE);
 
@@ -512,25 +465,6 @@ public class ProductoFormActivity extends AppCompatActivity {
         String estado = (switchVisible == null || switchVisible.isChecked()) ? "Visible" : "Oculto";
 
         boolean valido = true;
-        if (imagenSeleccionada.isEmpty()) {
-            if (tvImageError != null) {
-                tvImageError.setText("Dato inválido en Fotografía: debes agregar una imagen JPG o PNG (máx. 5 MB).");
-                tvImageError.setVisibility(View.VISIBLE);
-            }
-            valido = false;
-        } else {
-            if (!imagenSeleccionada.startsWith("data:") && !imagenSeleccionada.startsWith("http")) {
-                ResultadoValidacion rImg = ValidadorProducto.validarImagen(imagenSeleccionada, imagenTamanoBytes);
-                if (!rImg.esValido()) {
-                    if (tvImageError != null) {
-                        tvImageError.setText("Dato inválido en Fotografía: debe ser JPG o PNG de máximo 5 MB.");
-                        tvImageError.setVisibility(View.VISIBLE);
-                    }
-                    valido = false;
-                }
-            }
-        }
-
         ResultadoValidacion rName = ValidadorProducto.validarNombre(nombre);
         if (!rName.esValido()) {
             if (tvNameError != null) {
@@ -569,6 +503,37 @@ public class ProductoFormActivity extends AppCompatActivity {
         if (!valido) return;
 
         double precio = Double.parseDouble(precioStr);
+
+        if (uriImagenSeleccionada != null) {
+            if (btnSave != null) {
+                btnSave.setEnabled(false);
+                btnSave.setText(getString(R.string.image_uploading));
+            }
+            ImagenUploader.subirImagen(this, uriImagenSeleccionada, "productos", new ImagenUploader.UploadCallback() {
+                @Override
+                public void onSuccess(String url) {
+                    imagenSeleccionada = url;
+                    ejecutarGuardadoRemotoYLocal(nombre, descripcion, precio, estado);
+                }
+
+                @Override
+                public void onError(String mensaje) {
+                    if (btnSave != null) {
+                        btnSave.setEnabled(true);
+                        btnSave.setText(getString(R.string.product_save));
+                    }
+                    if (tvImageError != null) {
+                        tvImageError.setText(mensaje);
+                        tvImageError.setVisibility(View.VISIBLE);
+                    }
+                }
+            });
+        } else {
+            ejecutarGuardadoRemotoYLocal(nombre, descripcion, precio, estado);
+        }
+    }
+
+    private void ejecutarGuardadoRemotoYLocal(String nombre, String descripcion, double precio, String estado) {
         int remoteCatId = catalogoRemoteId > 0 ? catalogoRemoteId : catalogoLocalId;
         CrearProductoRequest req = new CrearProductoRequest(
                 remoteCatId, nombre, descripcion, precio, imagenSeleccionada, estado, idCategoriaSeleccionada
@@ -605,6 +570,10 @@ public class ProductoFormActivity extends AppCompatActivity {
                                 tvGlobalError.setText(err);
                                 tvGlobalError.setVisibility(View.VISIBLE);
                             }
+                            if (btnSave != null) {
+                                btnSave.setEnabled(true);
+                                btnSave.setText(getString(R.string.product_save));
+                            }
                         }
                     }
 
@@ -617,6 +586,10 @@ public class ProductoFormActivity extends AppCompatActivity {
                 if (tvGlobalError != null) {
                     tvGlobalError.setText("Este catálogo es solo local. Crea o selecciona un catálogo sincronizado para publicar productos.");
                     tvGlobalError.setVisibility(View.VISIBLE);
+                }
+                if (btnSave != null) {
+                    btnSave.setEnabled(true);
+                    btnSave.setText(getString(R.string.product_save));
                 }
             }
         }
@@ -682,7 +655,6 @@ public class ProductoFormActivity extends AppCompatActivity {
                 })
                 .show();
     }
-
 
     private void eliminarLocal() {
         executor.execute(() -> {

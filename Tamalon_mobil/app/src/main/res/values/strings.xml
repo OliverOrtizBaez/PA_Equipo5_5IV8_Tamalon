@@ -4,7 +4,7 @@
   Idioma de respaldo si el dispositivo no tiene traducción disponible.
   El nombre "Tamalon" nunca se traduce.
 -->
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
     <!-- App -->
     <string name="app_name">Tamalon</string>
     <string name="app_tagline">Vendedores que te encuentran</string>
@@ -442,4 +442,12 @@
     <string name="pago_error_red">Sin conexión a internet. Verifica tu conexión e intenta de nuevo.</string>
     <string name="pago_cargando_plan">Cargando información del plan...</string>
     <string name="pago_procesando">Procesando solicitud simulada...</string>
+
+    <!-- Subida de imágenes -->
+    <string name="image_too_large">La imagen es demasiado grande. Elige una más pequeña.</string>
+    <string name="image_bad_request">Solicitud de imagen inválida.</string>
+    <string name="image_service_unavailable">Servicio de imágenes no disponible temporalmente.</string>
+    <string name="image_upload_error">Error al subir la imagen. Intenta de nuevo.</string>
+    <string name="image_network_error">Sin conexión a internet al subir la imagen.</string>
+    <string name="image_uploading">Subiendo imagen...</string>
 </resources>

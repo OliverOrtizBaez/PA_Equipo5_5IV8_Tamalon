@@ -21,6 +21,7 @@ import com.tamalon.app.data.local.AppDatabase;
 import com.tamalon.app.model.Usuario;
 import com.tamalon.app.network.*;
 import com.tamalon.app.service.AutenticacionService;
+import com.tamalon.app.util.ImagenUploader;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -224,20 +225,22 @@ public class PerfilSeccionActivity extends AppCompatActivity {
         if (requestCode != REQUEST_PROFILE_PHOTO || resultCode != RESULT_OK || data == null || data.getData() == null) return;
         if (usuario == null) { Toast.makeText(this, "Espera a que cargue tu cuenta", Toast.LENGTH_SHORT).show(); return; }
         Uri origen = data.getData();
-        executor.execute(() -> {
-            try {
-                String dataUri = ImagenPerfil.codificarComoDataUri(this, origen);
-                runOnUiThread(() -> {
-                    usuario.fotoUri = dataUri;
-                    actualizarVistaFoto(dataUri);
-                    String n = personalNameInput != null ? personalNameInput.getText().toString().trim() : usuario.nombreCompleto;
-                    String tel = personalPhoneInput != null ? personalPhoneInput.getText().toString().trim() : (usuario.telefono == null ? "" : usuario.telefono);
-                    if (n == null || n.length() < 2) n = usuario.nombreCompleto;
-                    if (!tel.isEmpty() && !tel.matches("[0-9]{10}")) tel = usuario.telefono == null ? "" : usuario.telefono;
-                    enviarActualizacionPerfil(n, tel, dataUri, false);
-                });
-            } catch (Exception e) {
-                runOnUiThread(() -> Toast.makeText(PerfilSeccionActivity.this, "No se pudo procesar la foto", Toast.LENGTH_LONG).show());
+        Toast.makeText(this, R.string.image_uploading, Toast.LENGTH_SHORT).show();
+        ImagenUploader.subirImagen(this, origen, "perfiles", new ImagenUploader.UploadCallback() {
+            @Override
+            public void onSuccess(String url) {
+                usuario.fotoUri = url;
+                actualizarVistaFoto(url);
+                String n = personalNameInput != null ? personalNameInput.getText().toString().trim() : usuario.nombreCompleto;
+                String tel = personalPhoneInput != null ? personalPhoneInput.getText().toString().trim() : (usuario.telefono == null ? "" : usuario.telefono);
+                if (n == null || n.length() < 2) n = usuario.nombreCompleto;
+                if (!tel.isEmpty() && !tel.matches("[0-9]{10}")) tel = usuario.telefono == null ? "" : usuario.telefono;
+                enviarActualizacionPerfil(n, tel, url, false);
+            }
+
+            @Override
+            public void onError(String mensaje) {
+                Toast.makeText(PerfilSeccionActivity.this, mensaje, Toast.LENGTH_LONG).show();
             }
         });
     }
